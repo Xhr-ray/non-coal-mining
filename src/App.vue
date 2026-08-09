@@ -13,7 +13,7 @@
           <!-- 背景图片 -->
           <img
             v-if="backgroundImage"
-            :src="backgroundImage"
+            :src="getImageUrl(backgroundImage)"
             alt="矿区实景"
             class="scene-image"
             ref="sceneImage"
@@ -89,7 +89,7 @@
               <!-- 图片展示区域 -->
               <div v-if="selectedDetail.images && selectedDetail.images.length" class="detail-images">
                 <div v-for="(image, index) in selectedDetail.images" :key="index" class="detail-image-item">
-                  <img :src="image.src" :alt="image.alt" class="detail-image">
+                  <img :src="getImageUrl(image.src)" :alt="image.alt" class="detail-image">
                   <div class="image-caption">{{ image.caption }}</div>
                 </div>
               </div>
@@ -179,6 +179,12 @@ export default {
     }
   },
   methods: {
+    // 获取带 baseUrl 的图片路径
+    getImageUrl(path) {
+      if (!path) return ''
+      const base = import.meta.env.BASE_URL || '/'
+      return base + path.replace(/^\//, '')
+    },
     // 生成所有按钮
     generateButtons(savedPositions = null) {
       const allButtons = []

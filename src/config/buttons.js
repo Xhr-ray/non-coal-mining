@@ -4,45 +4,46 @@ export const buttonConfig = {
   blueButtons: [
     // 前期阶段
     { id: 1, text: '地质勘探', category: 'exploration' },
-    { id: 2, text: '基建/开采计划', category: 'exploration' },
+    { id: 2, text: '基建/开采计划', category: 'planning' },
 
-    // 生产阶段
-    { id: 3, text: '穿孔作业', category: 'planning' },
-    { id: 8, text: '爆破作业', category: 'construction' },
-    { id: 4, text: '铲装作业', category: 'planning' },
-    { id: 5, text: '运输作业', category: 'planning' },
-    { id: 9, text: '破碎作业', category: 'construction' },
-    { id: 10, text: '筛分/选矿', category: 'production' },
-    { id: 6, text: '尾矿处置', category: 'construction' },
+    // 露天生产阶段
+    { id: 3, text: '穿孔作业', category: 'piercing' },
+    { id: 4, text: '爆破作业', category: 'blasting' },
+    { id: 5, text: '铲装作业', category: 'dumping' },
+    { id: 6, text: '运输作业', category: 'transportation' },
+    { id: 7, text: '破碎作业', category: 'crushing' },
+    { id: 8, text: '筛分/选矿', category: 'beneficiation' },
+    { id: 9, text: '尾矿处置', category: 'tailings' },
 
+    // 地下生产阶段
+    { id: 10, text: '井筒/斜坡道开拓', category: 'exploit' },
+    { id: 11, text: '掘进作业', category: 'tunnelling' },
+    { id: 12, text: '支护作业', category: 'supporting' },
+    { id: 13, text: '采矿作业', category: 'mining' },
+    { id: 14, text: '装载作业', category: 'loading' },
+    { id: 15, text: '运输作业', category: 'Transportation' },
+    { id: 16, text: '井下破碎/转运', category: 'Crushing' },
+    { id: 17, text: '提升作业', category: 'lift' },
+    { id: 18, text: '充填作业', category: 'packing' },
 
-    { id: 11, text: '井筒/斜坡道开拓', category: 'production' },
-    { id: 7, text: '掘进作业', category: 'construction' },
-    { id: 12, text: '支护作业', category: 'production' },
-    { id: 13, text: '采矿作业', category: 'production' },
-    { id: 18, text: '装载作业', category: 'maintenance' },
-    { id: 14, text: '运输作业', category: 'production' },
-    { id: 19, text: '井下破碎/转运', category: 'maintenance' },
-    { id: 15, text: '提升作业', category: 'production' },
-    { id: 20, text: '充填作业', category: 'restoration' },
-
-    // 维护阶段
-    { id: 16, text: '通风系统', category: 'production' },
-    { id: 21, text: '排水系统', category: 'restoration' },
-    { id: 22, text: '供配电系统', category: 'restoration' },
-    { id: 23, text: '调度与通信系统', category: 'restoration' },
-    { id: 24, text: '自动化控制', category: 'closure' },
-    { id: 17, text: '安全监测系统', category: 'maintenance' },
-    { id: 25, text: '综合管控平台', category: 'closure' }
+    // 辅助生产系统
+    { id: 19, text: '通风系统', category: 'ventilating' },
+    { id: 20, text: '排水系统', category: 'drainage' },
+    { id: 21, text: '供配电系统', category: 'power' },
+    { id: 22, text: '调度与通信系统', category: 'communication' },
+    { id: 23, text: '自动化控制系统', category: 'automation' },
+    { id: 24, text: '安全监测系统', category: 'safety ' },
+    { id: 25, text: '综合管控平台', category: 'platform' }
   ],
 
   // 红色系按钮 - 5个
+  // 安全红线按钮
   redButtons: [
-    { id: 101, text: '尾矿库安全红线', category: 'safety' },
-    { id: 102, text: '边坡安全红线', category: 'emergency' },
-    { id: 103, text: '爆破境界红线', category: 'risk' },
-    { id: 104, text: '井下安全监测红线', category: 'accident' },
-    { id: 105, text: '提升运输安全红线', category: 'environmental' }
+    { id: 101, text: '尾矿库安全红线', category: 'TailingsSafety' },
+    { id: 102, text: '边坡安全红线', category: 'SlopeSafety' },
+    { id: 103, text: '爆破境界红线', category: 'BlastingSafety' },
+    { id: 104, text: '井下安全监测红线', category: 'MonitoringSafety' },
+    { id: 105, text: '提升运输安全红线', category: 'TransportationSafety' }
   ]
 }
 
@@ -50,6 +51,8 @@ export const buttonConfig = {
 export const buttonDescriptions = {
   exploration: '地质勘探阶段',
   planning: '规划设计阶段',
+  piercing: '穿孔作业',
+  
   construction: '建设施工阶段',
   production: '生产运营阶段',
   maintenance: '运维管理阶段',
@@ -167,5 +170,5 @@ export const buttonFeatures = [
   '严格的质量控制标准',
   '实时的监控系统',
   '完善的应急预案',
-  '持续的技术改进和优化'
+  '持续的技术改进和优化',
 ]

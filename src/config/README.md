@@ -1,11 +1,12 @@
 # 按钮配置说明
 
 ## 📁 文件位置
-所有按钮配置都在 `src/config/buttons.js` 文件中。
+- `src/config/buttons.js` - 按钮基本配置
+- `src/config/buttonDetails.js` - 按钮详细描述 ⭐
 
 ## 🔧 配置结构
 
-### 1. 按钮定义 (`buttonConfig`)
+### 1. 按钮基本配置 (`buttonConfig`)
 ```javascript
 export const buttonConfig = {
   // 蓝色系按钮 - 25个
@@ -50,7 +51,34 @@ export const buttonStats = {
 }
 ```
 
-### 4. 按钮位置配置 (`buttonPositions`)
+### 4. 按钮详细描述 (`buttonDetails`) ⭐ 新增
+```javascript
+export const buttonDetails = {
+  1: {
+    title: '地质勘探',
+    description: '地质勘探是矿山开发的基础工作...',
+    features: [
+      '综合运用地质调查、物探、化探等多种勘探手段',
+      '高精度钻探技术获取准确矿体参数',
+      // ... 更多特点
+    ],
+    stats: {
+      '勘探面积': '2.5平方公里',
+      '钻孔数量': '156个',
+      // ... 更多统计数据
+    }
+  },
+  // ... 更多按钮的详细描述
+}
+```
+
+每个按钮的详细描述包含：
+- `title`: 按钮标题
+- `description`: 详细描述文字
+- `features`: 特点列表数组
+- `stats`: 统计数据对象
+
+### 5. 按钮位置配置 (`buttonPositions`)
 ```javascript
 export const buttonPositions = {
   // 蓝色按钮位置 - 5x5网格
@@ -74,7 +102,7 @@ export const buttonPositions = {
 }
 ```
 
-### 5. 统一特征描述 (`buttonFeatures`)
+### 6. 统一特征描述 (`buttonFeatures`)
 ```javascript
 export const buttonFeatures = [
   '专业的技术团队和设备',
@@ -111,7 +139,57 @@ export const buttonFeatures = [
 - 页面加载时自动读取保存的位置
 - 支持跨浏览器、跨会话保持位置
 
-## 🔄 如何修改按钮
+## 🔄 如何修改按钮详细描述 ⭐
+
+### 修改特定按钮的描述
+打开 `src/config/buttonDetails.js`，找到对应的按钮ID，修改其详细内容：
+
+```javascript
+export const buttonDetails = {
+  1: {
+    title: '地质勘探',           // 修改标题
+    description: '新的描述文字...',  // 修改描述
+    features: [               // 修改特点列表
+      '新特点1',
+      '新特点2',
+      // ...
+    ],
+    stats: {                  // 修改统计数据
+      '新统计项': '新数值',
+      // ...
+    }
+  },
+  // ... 其他按钮
+}
+```
+
+### 添加新按钮的详细描述
+1. 在 `buttonDetails.js` 中添加新ID的详细描述
+2. 确保ID与 `buttonConfig` 中的按钮ID匹配
+3. 提供完整的 `title`, `description`, `features`, `stats`
+
+### 详细描述结构说明
+每个按钮的详细描述必须包含：
+
+#### **title** (必填)
+- 按钮的完整标题
+- 在详情弹窗中显示为主要标题
+
+#### **description** (必填)
+- 详细描述文字，解释该环节的作用和重要性
+- 建议长度：50-150字
+
+#### **features** (必填)
+- 特点/优势列表
+- 数组格式，建议5-8条
+- 每条简洁明了，突出重点
+
+#### **stats** (必填)
+- 统计数据对象
+- 键值对格式
+- 建议包含4-6个关键指标
+
+## 🔄 如何修改按钮基本配置
 
 ### 添加新按钮
 1. 在对应的按钮数组中添加新配置：

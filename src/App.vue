@@ -86,10 +86,23 @@
               <h2>{{ selectedDetail.text }}</h2>
             </div>
             <div class="detail-body">
-              <div class="detail-description">
-                <h3>概述</h3>
-                <p>{{ selectedDetail.description }}</p>
+              <!-- 图片展示区域 -->
+              <div v-if="selectedDetail.images && selectedDetail.images.length" class="detail-images">
+                <div v-for="(image, index) in selectedDetail.images" :key="index" class="detail-image-item">
+                  <img :src="image.src" :alt="image.alt" class="detail-image">
+                  <div class="image-caption">{{ image.caption }}</div>
+                </div>
               </div>
+
+              <!-- 详细描述区域 -->
+              <div class="detail-description">
+                <h3>详细说明</h3>
+                <!-- 长文本显示支持HTML和简单Markdown -->
+                <div v-if="selectedDetail.longDescription" class="long-description" v-html="renderMarkdown(selectedDetail.longDescription)"></div>
+                <p v-else>{{ selectedDetail.shortDescription || selectedDetail.description }}</p>
+              </div>
+
+              <!-- 主要特点 -->
               <div v-if="selectedDetail.features && selectedDetail.features.length" class="detail-features">
                 <h3>主要特点</h3>
                 <ul>
@@ -98,6 +111,8 @@
                   </li>
                 </ul>
               </div>
+
+              <!-- 关键数据 -->
               <div v-if="selectedDetail.stats" class="detail-stats">
                 <h3>关键数据</h3>
                 <div class="stats-grid">
@@ -116,14 +131,15 @@
 </template>
 
 <script>
-import { buttonConfig, buttonDescriptions, buttonStats, buttonPositions, buttonFeatures } from './config/buttons.js'
+import { buttonConfig, buttonPositions, buttonFeatures } from './config/buttons.js'
+import { buttonDetails } from './config/buttonDetails.js'
 
 export default {
   name: 'MiningFlow',
   data() {
     return {
       // 背景图片（可选）
-      backgroundImage: '/图片41.png',
+      backgroundImage: '/1.png',
 
       // 选中的详情
       selectedDetail: null,
@@ -249,7 +265,19 @@ export default {
 
     // 创建单个按钮
     createButton(config, position, type) {
-      const baseDescription = buttonDescriptions[config.category] || buttonDescriptions.default
+      // 获取按钮的详细描述，如果没有则使用默认描述
+      const details = buttonDetails[config.id] || {
+        title: config.text,
+        shortDescription: `${config.text}是矿山全生命周期管理的重要组成部分，确保矿山运营的安全、高效和可持续发展。`,
+        longDescription: '',
+        images: [],
+        features: buttonFeatures,
+        stats: {
+          '状态': '正常运行',
+          '重要性': '高',
+          '更新时间': '实时更新'
+        }
+      }
 
       return {
         id: config.id,
@@ -257,9 +285,11 @@ export default {
         left: position.left,
         top: position.top,
         type: type,
-        description: `${baseDescription} ${config.text}是矿山全生命周期管理的重要组成部分，确保矿山运营的安全、高效和可持续发展。`,
-        features: buttonFeatures,
-        stats: buttonStats[config.category] || buttonStats.production
+        shortDescription: details.shortDescription,
+        longDescription: details.longDescription,
+        images: details.images,
+        features: details.features,
+        stats: details.stats
       }
     },
 
@@ -431,6 +461,44 @@ export default {
         imageContainer.style.width = displayWidth + 'px'
         imageContainer.style.height = displayHeight + 'px'
       })
+    },
+
+    // 简单的Markdown渲染方法
+    renderMarkdown(text) {
+      if (!text) return ''
+
+      // HTML转义
+      let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+
+      // Markdown转换规则
+      // 标题
+      html = html.replace(/^### (.*$)/gim, '<h4>$1</h4>')
+      html = html.replace(/^## (.*$)/gim, '<h3>$1</h3>')
+      html = html.replace(/^# (.*$)/gim, '<h2>$1</h2>')
+
+      // 粗体和斜体
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>')
+
+      // 列表
+      html = html.replace(/^\- (.*$)/gim, '<li>$1</li>')
+      html = html.replace(/^(\d+)\. (.*$)/gim, '<li>$2</li>')
+
+      // 段落
+      html = html.replace(/\n\n/g, '</p><p>')
+      html = '<p>' + html + '</p>'
+
+      // 清理空段落
+      html = html.replace(/<p><\/p>/g, '')
+      html = html.replace(/<p>(<h[1-6]>)/g, '$1')
+      html = html.replace(/(<\/h[1-6]>)<\/p>/g, '$1')
+      html = html.replace(/<p>(<li>)/g, '$1')
+      html = html.replace(/(<\/li>)<\/p>/g, '$1')
+
+      return html
     }
   }
 }
@@ -776,9 +844,9 @@ export default {
   background: linear-gradient(135deg, rgba(10, 25, 41, 0.95) 0%, rgba(26, 35, 50, 0.95) 100%);
   border: 2px solid #00bcd4;
   border-radius: 15px;
-  max-width: 800px;
-  max-height: 90vh;
-  width: 90%;
+  max-width: 1200px;
+  max-height: 85vh;
+  width: 85%;
   overflow-y: auto;
   box-shadow:
     0 20px 60px rgba(0, 0, 0, 0.5),
@@ -851,6 +919,94 @@ export default {
   margin-bottom: 15px;
   border-left: 3px solid #00bcd4;
   padding-left: 12px;
+}
+
+/* 详情图片区域 */
+.detail-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.detail-image-item {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 188, 212, 0.3);
+}
+
+.detail-image {
+  width: 100%;
+  height: 500px;
+  object-fit: cover;
+  display: block;
+}
+
+.image-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 12px;
+  font-size: 14px;
+  text-align: center;
+  border-top: 1px solid rgba(0, 188, 212, 0.3);
+}
+
+/* 详细描述区域 */
+.long-description {
+  font-size: 20px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.long-description h2,
+.long-description h3,
+.long-description h4 {
+  color: #00bcd4;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.long-description h2 {
+  font-size: 20px;
+  border-left: 3px solid #00bcd4;
+  padding-left: 12px;
+}
+
+.long-description h3 {
+  font-size: 18px;
+  border-left: 2px solid #00bcd4;
+  padding-left: 10px;
+}
+
+.long-description h4 {
+  font-size: 16px;
+  color: #00e5ff;
+  margin-bottom: 8px;
+}
+
+.long-description p {
+  margin-bottom: 12px;
+}
+
+.long-description ul,
+.long-description ol {
+  margin-left: 20px;
+  margin-bottom: 12px;
+}
+
+.long-description li {
+  margin-bottom: 6px;
+}
+
+.long-description strong {
+  color: #00e5ff;
+  font-weight: 600;
 }
 
 .detail-description p {

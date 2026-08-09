@@ -4,5 +4,6 @@ import vue from '@vitejs/plugin-vue'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/non-coal-mining/', // GitHub Pages 部署路径
+  // 本地开发使用根路径，构建时使用 GitHub Pages 路径
+  base: process.env.NODE_ENV === 'production' ? '/non-coal-mining/' : '/',
 })

@@ -8,46 +8,51 @@
     <!-- 全屏实景图区域 -->
     <div class="scene-section">
       <div class="scene-background">
-        <!-- 背景图片 -->
-        <img
-          v-if="backgroundImage"
-          :src="backgroundImage"
-          alt="矿区实景"
-          class="scene-image"
-        >
-        <div v-else class="scene-placeholder">
-          <div class="placeholder-content">
-            <h2>矿产资源综合利用展示平台</h2>
-            <p>点击下方按钮查看详细信息</p>
+        <!-- 图片容器 - 与图片实际显示区域匹配 -->
+        <div class="image-container" ref="imageContainer">
+          <!-- 背景图片 -->
+          <img
+            v-if="backgroundImage"
+            :src="backgroundImage"
+            alt="矿区实景"
+            class="scene-image"
+            ref="sceneImage"
+            @load="updateImageContainer"
+          >
+          <div v-else class="scene-placeholder">
+            <div class="placeholder-content">
+              <h2>矿产资源综合利用展示平台</h2>
+              <p>点击下方按钮查看详细信息</p>
+            </div>
           </div>
-        </div>
 
-        <!-- 可点击的按钮 -->
-        <div
-          v-for="button in buttons"
-          :key="button.id"
-          class="scene-button"
-          :class="{
-            'edit-mode': editMode,
-            'dragging': draggingButton === button.id,
-            'red-button': button.type === 'red',
-            'blue-button': button.type === 'blue'
-          }"
-          :style="{
-            left: button.left,
-            top: button.top,
-            transform: 'translate(-50%, -50%)',
-            cursor: editMode ? 'move' : 'pointer'
-          }"
-          @click="editMode ? startDrag(button, $event) : showDetail(button)"
-          @mousedown="editMode && startDrag(button, $event)"
-          @mousemove="editMode && onDrag($event)"
-          @mouseup="editMode && endDrag()"
-        >
-          <div class="button-text">{{ button.text }}</div>
-          <div class="button-pulse"></div>
-          <div v-if="editMode" class="button-coords">
-            {{ button.left }}, {{ button.top }}
+          <!-- 可点击的按钮 -->
+          <div
+            v-for="button in buttons"
+            :key="button.id"
+            class="scene-button"
+            :class="{
+              'edit-mode': editMode,
+              'dragging': draggingButton === button.id,
+              'red-button': button.type === 'red',
+              'blue-button': button.type === 'blue'
+            }"
+            :style="{
+              left: button.left,
+              top: button.top,
+              transform: 'translate(-50%, -50%)',
+              cursor: editMode ? 'move' : 'pointer'
+            }"
+            @click="editMode ? startDrag(button, $event) : showDetail(button)"
+            @mousedown="editMode && startDrag(button, $event)"
+            @mousemove="editMode && onDrag($event)"
+            @mouseup="editMode && endDrag()"
+          >
+            <div class="button-text">{{ button.text }}</div>
+            <div class="button-pulse"></div>
+            <div v-if="editMode" class="button-coords">
+              {{ button.left }}, {{ button.top }}
+            </div>
           </div>
         </div>
 
@@ -136,6 +141,26 @@ export default {
   mounted() {
     // 加载保存的按钮位置
     this.loadSavedPositions()
+
+    // 等待图片加载完成后更新容器大小
+    this.$nextTick(() => {
+      this.updateImageContainer()
+    })
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', this.updateImageContainer)
+
+    // 监听图片加载完成
+    if (this.$refs.sceneImage) {
+      this.$refs.sceneImage.addEventListener('load', this.updateImageContainer)
+    }
+  },
+  beforeUnmount() {
+    // 清理事件监听器
+    window.removeEventListener('resize', this.updateImageContainer)
+    if (this.$refs.sceneImage) {
+      this.$refs.sceneImage.removeEventListener('load', this.updateImageContainer)
+    }
   },
   methods: {
     // 生成所有按钮
@@ -298,10 +323,10 @@ export default {
       const button = this.buttons.find(b => b.id === this.draggingButton)
       if (!button) return
 
-      const container = this.$el.querySelector('.scene-background')
+      const container = this.$refs.imageContainer
       const containerRect = container.getBoundingClientRect()
 
-      // 计算新位置（相对于容器）
+      // 计算新位置（相对于图片容器）
       const newX = event.clientX - containerRect.left
       const newY = event.clientY - containerRect.top
 
@@ -359,6 +384,53 @@ export default {
         this.buttons = this.generateButtons()
         console.log('按钮位置已重置到默认值')
       }
+    },
+
+    // 更新图片容器大小以匹配图片实际显示区域
+    updateImageContainer() {
+      this.$nextTick(() => {
+        const sceneSection = this.$el.querySelector('.scene-section')
+        const sceneImage = this.$refs.sceneImage
+        const imageContainer = this.$refs.imageContainer
+
+        if (!sceneSection || !sceneImage || !imageContainer) return
+
+        // 获取容器的尺寸
+        const containerRect = sceneSection.getBoundingClientRect()
+
+        // 获取图片的原始尺寸
+        const imgWidth = sceneImage.naturalWidth
+        const imgHeight = sceneImage.naturalHeight
+
+        if (!imgWidth || !imgHeight) return
+
+        // 计算图片在容器中的实际显示尺寸（使用 object-fit: contain）
+        const containerRatio = containerRect.width / containerRect.height
+        const imageRatio = imgWidth / imgHeight
+
+        let displayWidth, displayHeight
+
+        if (imageRatio > containerRatio) {
+          // 图片更宽，以宽度为准
+          displayWidth = containerRect.width
+          displayHeight = displayWidth / imageRatio
+        } else {
+          // 图片更高，以高度为准
+          displayHeight = containerRect.height
+          displayWidth = displayHeight * imageRatio
+        }
+
+        // 计算图片在容器中的居中位置
+        const left = (containerRect.width - displayWidth) / 2
+        const top = (containerRect.height - displayHeight) / 2
+
+        // 设置 image-container 的样式来匹配图片的实际显示区域
+        imageContainer.style.position = 'absolute'
+        imageContainer.style.left = left + 'px'
+        imageContainer.style.top = top + 'px'
+        imageContainer.style.width = displayWidth + 'px'
+        imageContainer.style.height = displayHeight + 'px'
+      })
     }
   }
 }
@@ -414,11 +486,22 @@ export default {
   background: #0a1929;
 }
 
+/* 图片容器 - 匹配图片实际显示区域 */
+.image-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
 .scene-image {
   width: 100%;
   height: 100%;
   object-fit: contain;
   opacity: 0.9;
+  display: block;
 }
 
 .scene-placeholder {

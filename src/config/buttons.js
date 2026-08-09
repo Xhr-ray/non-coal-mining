@@ -4,49 +4,45 @@ export const buttonConfig = {
   blueButtons: [
     // 前期阶段
     { id: 1, text: '地质勘探', category: 'exploration' },
-    { id: 2, text: '矿山测量', category: 'exploration' },
-    { id: 3, text: '矿区规划', category: 'planning' },
-    { id: 4, text: '采矿许可', category: 'planning' },
-    { id: 5, text: '土地征用', category: 'planning' },
-
-    // 建设阶段
-    { id: 6, text: '矿山建设', category: 'construction' },
-    { id: 7, text: '设备安装', category: 'construction' },
-    { id: 8, text: '基础设施', category: 'construction' },
-    { id: 9, text: '人员培训', category: 'construction' },
+    { id: 2, text: '基建/开采计划', category: 'exploration' },
 
     // 生产阶段
-    { id: 10, text: '试生产', category: 'production' },
-    { id: 11, text: '正式投产', category: 'production' },
-    { id: 12, text: '采矿作业', category: 'production' },
-    { id: 13, text: '选矿加工', category: 'production' },
-    { id: 14, text: '冶炼提炼', category: 'production' },
-    { id: 15, text: '产品制造', category: 'production' },
-    { id: 16, text: '质量检测', category: 'production' },
+    { id: 3, text: '穿孔作业', category: 'planning' },
+    { id: 8, text: '爆破作业', category: 'construction' },
+    { id: 4, text: '铲装作业', category: 'planning' },
+    { id: 5, text: '运输作业', category: 'planning' },
+    { id: 9, text: '破碎作业', category: 'construction' },
+    { id: 10, text: '筛分/选矿', category: 'production' },
+    { id: 6, text: '尾矿处置', category: 'construction' },
+
+
+    { id: 11, text: '井筒/斜坡道开拓', category: 'production' },
+    { id: 7, text: '掘进作业', category: 'construction' },
+    { id: 12, text: '支护作业', category: 'production' },
+    { id: 13, text: '采矿作业', category: 'production' },
+    { id: 18, text: '装载作业', category: 'maintenance' },
+    { id: 14, text: '运输作业', category: 'production' },
+    { id: 19, text: '井下破碎/转运', category: 'maintenance' },
+    { id: 15, text: '提升作业', category: 'production' },
+    { id: 20, text: '充填作业', category: 'restoration' },
 
     // 维护阶段
-    { id: 17, text: '设备维护', category: 'maintenance' },
-    { id: 18, text: '安全监测', category: 'maintenance' },
-    { id: 19, text: '环境保护', category: 'maintenance' },
-
-    // 恢复阶段
-    { id: 20, text: '生态修复', category: 'restoration' },
-    { id: 21, text: '土地复垦', category: 'restoration' },
-    { id: 22, text: '植被恢复', category: 'restoration' },
-    { id: 23, text: '废物处理', category: 'restoration' },
-
-    // 闭坑阶段
-    { id: 24, text: '矿山闭坑', category: 'closure' },
-    { id: 25, text: '后期管理', category: 'closure' }
+    { id: 16, text: '通风系统', category: 'production' },
+    { id: 21, text: '排水系统', category: 'restoration' },
+    { id: 22, text: '供配电系统', category: 'restoration' },
+    { id: 23, text: '调度与通信系统', category: 'restoration' },
+    { id: 24, text: '自动化控制', category: 'closure' },
+    { id: 17, text: '安全监测系统', category: 'maintenance' },
+    { id: 25, text: '综合管控平台', category: 'closure' }
   ],
 
   // 红色系按钮 - 5个
   redButtons: [
-    { id: 101, text: '安全监管', category: 'safety' },
-    { id: 102, text: '应急指挥', category: 'emergency' },
-    { id: 103, text: '风险评估', category: 'risk' },
-    { id: 104, text: '事故处理', category: 'accident' },
-    { id: 105, text: '环保监察', category: 'environmental' }
+    { id: 101, text: '尾矿库安全红线', category: 'safety' },
+    { id: 102, text: '边坡安全红线', category: 'emergency' },
+    { id: 103, text: '爆破境界红线', category: 'risk' },
+    { id: 104, text: '井下安全监测红线', category: 'accident' },
+    { id: 105, text: '提升运输安全红线', category: 'environmental' }
   ]
 }
 

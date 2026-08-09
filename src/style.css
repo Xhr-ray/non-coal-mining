@@ -1,0 +1,17 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Microsoft YaHei', Arial, sans-serif;
+  background: linear-gradient(135deg, #0a1929 0%, #1a2332 100%);
+  min-height: 100vh;
+  color: #ffffff;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}

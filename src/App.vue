@@ -338,7 +338,19 @@ export default {
       // 保存按钮位置到 localStorage
       this.saveButtonPositions()
 
-      console.log('新位置保存:', this.buttons.map(b => ({ id: b.id, text: b.text, left: b.left, top: b.top })))
+      // 生成可复制的位置配置代码
+      const positionLines = this.buttons.map(b =>
+        `  ${b.id}: { left: '${b.left}', top: '${b.top}' },  // ${b.text}`
+      ).join('\n')
+      const codeStr = `export const defaultButtonPositions = {\n${positionLines}\n}`
+      console.log('按钮位置已保存，代码已复制到剪贴板：\n' + codeStr)
+
+      // 复制到剪贴板
+      navigator.clipboard.writeText(codeStr).then(() => {
+        alert('按钮位置已保存！配置代码已复制到剪贴板，请粘贴给我固化到代码中。')
+      }).catch(() => {
+        alert('按钮位置已保存！请打开控制台（F12）复制代码给我固化。')
+      })
     },
 
     startDrag(button, event) {

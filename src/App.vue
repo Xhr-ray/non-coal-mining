@@ -131,7 +131,7 @@
 </template>
 
 <script>
-import { buttonConfig, buttonPositions, buttonFeatures } from './config/buttons.js'
+import { buttonConfig, defaultButtonPositions, buttonFeatures } from './config/buttons.js'
 import { buttonDetails } from './config/buttonDetails.js'
 
 export default {
@@ -189,84 +189,29 @@ export default {
     generateButtons(savedPositions = null) {
       const allButtons = []
 
-      // 生成蓝色按钮
-      const bluePositions = savedPositions
-        ? this.getSavedPositionsForType(savedPositions, 'blue')
-        : this.generateButtonPositions(buttonConfig.blueButtons.length, 'blue')
+      // 从 localStorage 提取位置映射
+      const savedMap = {}
+      if (savedPositions) {
+        savedPositions.forEach(pos => {
+          if (pos.id && pos.left && pos.top) {
+            savedMap[pos.id] = { left: pos.left, top: pos.top }
+          }
+        })
+      }
 
-      buttonConfig.blueButtons.forEach((config, index) => {
-        // 如果有保存的位置就使用，否则使用默认位置
-        let position
-        if (savedPositions && bluePositions[config.id]) {
-          position = bluePositions[config.id]
-        } else {
-          position = Array.isArray(bluePositions) ? bluePositions[index] : this.generateButtonPositions(1, 'blue')[0]
-        }
+      // 蓝色按钮
+      buttonConfig.blueButtons.forEach(config => {
+        const position = savedMap[config.id] || defaultButtonPositions[config.id] || { left: '50%', top: '50%' }
         allButtons.push(this.createButton(config, position, 'blue'))
       })
 
-      // 生成红色按钮
-      const redPositions = savedPositions
-        ? this.getSavedPositionsForType(savedPositions, 'red')
-        : this.generateButtonPositions(buttonConfig.redButtons.length, 'red')
-
-      buttonConfig.redButtons.forEach((config, index) => {
-        // 如果有保存的位置就使用，否则使用默认位置
-        let position
-        if (savedPositions && redPositions[config.id]) {
-          position = redPositions[config.id]
-        } else {
-          position = Array.isArray(redPositions) ? redPositions[index] : this.generateButtonPositions(1, 'red')[0]
-        }
+      // 红色按钮
+      buttonConfig.redButtons.forEach(config => {
+        const position = savedMap[config.id] || defaultButtonPositions[config.id] || { left: '50%', top: '50%' }
         allButtons.push(this.createButton(config, position, 'red'))
       })
 
       return allButtons
-    },
-
-    // 从保存的位置中获取特定类型的位置
-    getSavedPositionsForType(savedPositions, type) {
-      const result = {}
-
-      savedPositions.forEach(pos => {
-        // 检查位置是否匹配指定类型
-        if (pos.type === type && pos.id && pos.left && pos.top) {
-          result[pos.id] = {
-            left: pos.left,
-            top: pos.top
-          }
-        }
-      })
-
-      return result
-    },
-
-    // 生成按钮位置
-    generateButtonPositions(count, type) {
-      const positions = []
-      const config = buttonPositions[type]
-
-      if (config.layout === 'grid') {
-        // 网格布局
-        for (let i = 0; i < count; i++) {
-          const col = i % config.cols
-          const row = Math.floor(i / config.cols)
-          positions.push({
-            left: `${config.startX + col * config.spacingX}%`,
-            top: `${config.startY + row * config.spacingY}%`
-          })
-        }
-      } else if (config.layout === 'vertical') {
-        // 垂直布局
-        for (let i = 0; i < count; i++) {
-          positions.push({
-            left: `${config.startX}%`,
-            top: `${config.startY + i * config.spacingY}%`
-          })
-        }
-      }
-
-      return positions
     },
 
     // 创建单个按钮

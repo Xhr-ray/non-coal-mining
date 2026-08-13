@@ -6,8 +6,8 @@
         <div class="header-subtitle">Mining Lifecycle Platform</div>
       </div>
 
-      <!-- Desktop Navigation -->
-      <nav class="header-nav" v-if="!isMobile">
+      <!-- Desktop Navigation - 隐藏 -->
+      <nav class="header-nav" v-if="!isMobile && false">
         <button
           v-for="stage in stages"
           :key="stage.id"

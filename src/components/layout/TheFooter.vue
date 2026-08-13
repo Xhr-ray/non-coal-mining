@@ -21,7 +21,7 @@
             <span v-if="!isMobile">首页</span>
           </button>
           <button class="footer-action" @click="toggleTheme" title="切换主题">
-            <span>{{ isDarkMode ? '🌙' : '☀️' }}</span>
+            <span>{{ isDarkMode ? "🌙" : "☀️" }}</span>
             <span v-if="!isMobile">主题</span>
           </button>
         </div>
@@ -29,7 +29,7 @@
 
       <div class="footer-section">
         <div class="footer-info">
-          <span>© 2024 矿山全生命周期展示平台</span>
+          <span>© 矿山全生命周期展示平台</span>
         </div>
       </div>
     </div>
@@ -37,53 +37,59 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUIStore } from '@/stores/uiStore'
-import { useMiningStore } from '@/stores/miningStore'
+import { computed, ref, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
+import { useUIStore } from "@/stores/uiStore";
+import { useMiningStore } from "@/stores/miningStore";
 
-const router = useRouter()
-const uiStore = useUIStore()
-const miningStore = useMiningStore()
+const router = useRouter();
+const uiStore = useUIStore();
+const miningStore = useMiningStore();
 
 // Responsive state
-const windowWidth = ref(window.innerWidth)
+const windowWidth = ref(window.innerWidth);
 
 // Computed
-const isMobile = computed(() => windowWidth.value < 768)
-const isDarkMode = computed(() => uiStore.isDarkMode)
+const isMobile = computed(() => windowWidth.value < 768);
+const isDarkMode = computed(() => uiStore.isDarkMode);
 const currentStageName = computed(() => {
-  const currentStage = miningStore.stages.find(s => s.id === uiStore.currentStage)
-  return currentStage ? currentStage.title : ''
-})
+  const currentStage = miningStore.stages.find(
+    (s) => s.id === uiStore.currentStage,
+  );
+  return currentStage ? currentStage.title : "";
+});
 
 // Methods
 const goHome = () => {
-  router.push({ name: 'home' })
-}
+  router.push({ name: "home" });
+};
 
 const toggleTheme = () => {
-  uiStore.toggleDarkMode()
-}
+  uiStore.toggleDarkMode();
+};
 
 const handleResize = () => {
-  windowWidth.value = window.innerWidth
-}
+  windowWidth.value = window.innerWidth;
+};
 
 // Lifecycle
 onMounted(() => {
-  window.addEventListener('resize', handleResize)
-})
+  window.addEventListener("resize", handleResize);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize)
-})
+  window.removeEventListener("resize", handleResize);
+});
 </script>
 
 <style scoped>
 .the-footer {
   width: 100%;
-  background: linear-gradient(135deg, rgba(10, 25, 41, 0.95) 0%, rgba(26, 35, 50, 0.95) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(10, 25, 41, 0.95) 0%,
+    rgba(26, 35, 50, 0.95) 100%
+  );
   border-top: 1px solid rgba(0, 188, 212, 0.3);
   flex-shrink: 0;
   z-index: 100;
@@ -157,7 +163,8 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }

@@ -12,6 +12,15 @@ const routes = [
     }
   },
   {
+    path: '/3d',
+    name: '3d-view',
+    component: () => import('@/views/Mining3DView.vue'),
+    meta: {
+      title: '3D矿山场景展示',
+      description: '交互式3D矿山全生命周期体验'
+    }
+  },
+  {
     path: '/stage/:stageId',
     name: 'stage',
     component: () => import('@/views/StageView.vue'),

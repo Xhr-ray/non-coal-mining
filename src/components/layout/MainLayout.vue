@@ -2,9 +2,11 @@
   <div class="main-layout" :class="{ 'dark-mode': isDarkMode }">
     <TheHeader />
     <main class="main-content">
-      <transition name="page" mode="out-in">
-        <router-view :key="$route.fullPath" />
-      </transition>
+      <router-view v-slot="{ Component, route }">
+        <transition :key="route.fullPath" name="page" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
     <TheFooter />
   </div>

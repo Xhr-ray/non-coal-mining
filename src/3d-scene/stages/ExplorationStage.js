@@ -28,9 +28,6 @@ export class ExplorationStage {
     // 创建勘探设备
     this.createEquipment()
 
-    // 创建基础设施
-    this.createInfrastructure()
-
     // 添加热点
     this.addHotspots()
 

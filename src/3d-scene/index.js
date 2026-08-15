@@ -15,7 +15,6 @@ export { ExplorationStage } from './stages/ExplorationStage.js'
 export { OpenPitStage } from './stages/OpenPitStage.js'
 export { UndergroundStage } from './stages/UndergroundStage.js'
 export { ReclamationStage } from './stages/ReclamationStage.js'
-export { AuxiliaryStage } from './stages/AuxiliaryStage.js'
 
 // 默认导出主控制器
 export { default } from './SceneController.js'

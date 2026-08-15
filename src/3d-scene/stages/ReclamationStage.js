@@ -53,60 +53,6 @@ export class ReclamationStage {
   createTerrain() {
     const terrain = this.terrainGenerator.createRehabilitationTerrain()
     this.sceneObjects.push(terrain)
-
-    // 创建平整后的台阶
-    this.createReclaimedSteps()
-  }
-
-  /**
-   * 创建复垦台阶
-   */
-  createReclaimedSteps() {
-    const steps = new THREE.Group()
-
-    // 台阶边坡（已绿化）
-    for (let i = 0; i < 5; i++) {
-      const stepGeometry = new THREE.BoxGeometry(150, 10 + i * 2, 30)
-      const stepMaterial = new THREE.MeshStandardMaterial({
-        color: new THREE.Color().setHSL(0.3, 0.6, 0.3 + i * 0.05), // 渐变绿色
-        roughness: 0.9
-      })
-      const step = new THREE.Mesh(stepGeometry, stepMaterial)
-      step.position.set(0, i * 8, 80 + i * 25)
-      step.castShadow = true
-      step.receiveShadow = true
-      steps.add(step)
-
-      // 在台阶上种植植被
-      this.addStepVegetation(steps, 0, i * 8, 80 + i * 25)
-    }
-
-    this.sceneManager.scene.add(steps)
-    this.sceneObjects.push(steps)
-  }
-
-  /**
-   * 添加台阶植被
-   */
-  addStepVegetation(parent, x, y, z) {
-    // 草地
-    const grassGeometry = new THREE.PlaneGeometry(140, 25)
-    const grassMaterial = new THREE.MeshStandardMaterial({
-      color: 0x4A7C59,
-      roughness: 0.9
-    })
-    const grass = new THREE.Mesh(grassGeometry, grassMaterial)
-    grass.rotation.x = -Math.PI / 2
-    grass.position.set(x, y + 0.1, z)
-    parent.add(grass)
-
-    // 随机树木
-    const treeCount = Math.floor(Math.random() * 8) + 4
-    for (let i = 0; i < treeCount; i++) {
-      const treeX = x - 60 + Math.random() * 120
-      const treeZ = z - 10 + Math.random() * 20
-      this.createTree(parent, treeX, y, treeZ)
-    }
   }
 
   /**
@@ -223,10 +169,6 @@ export class ReclamationStage {
     const lake = this.createLake()
     this.sceneObjects.push(lake)
 
-    // 溪流
-    const stream = this.createStream()
-    this.sceneObjects.push(stream)
-
     // 喷泉
     const fountain = this.createFountain()
     this.sceneObjects.push(fountain)
@@ -285,7 +227,8 @@ export class ReclamationStage {
     platform.position.set(50, 0, 0)
     lake.add(platform)
 
-    lake.position.set(0, 0, 0)
+    // 将人工湖下沉到复垦盆地底部
+    lake.position.set(0, -8, 0)
     this.sceneManager.scene.add(lake)
 
     return lake
@@ -368,77 +311,6 @@ export class ReclamationStage {
 
     bench.position.set(position.x, 0, position.z)
     parent.add(bench)
-  }
-
-  /**
-   * 创建溪流
-   */
-  createStream() {
-    const stream = new THREE.Group()
-
-    // 溪流路径
-    const pathPoints = []
-    for (let i = 0; i < 10; i++) {
-      pathPoints.push(new THREE.Vector3(
-        -80 + i * 20,
-        0,
-        -60 + Math.sin(i * 0.5) * 20
-      ))
-    }
-
-    // 创建溪流
-    for (let i = 0; i < pathPoints.length - 1; i++) {
-      const start = pathPoints[i]
-      const end = pathPoints[i + 1]
-
-      const segmentGeometry = new THREE.PlaneGeometry(3, 25)
-      const waterMaterial = new THREE.MeshStandardMaterial({
-        color: 0x5BA3C6,
-        roughness: 0.1,
-        transparent: true,
-        opacity: 0.7
-      })
-
-      const segment = new THREE.Mesh(segmentGeometry, waterMaterial)
-      segment.rotation.x = -Math.PI / 2
-
-      const midX = (start.x + end.x) / 2
-      const midZ = (start.z + end.z) / 2
-      const angle = Math.atan2(end.z - start.z, end.x - start.x)
-
-      segment.position.set(midX, 0.1, midZ)
-      segment.rotation.z = angle
-
-      stream.add(segment)
-
-      // 河岸石
-      for (let j = 0; j < 3; j++) {
-        const rockGeometry = new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.5)
-        const rockMaterial = new THREE.MeshStandardMaterial({
-          color: 0x696969,
-          roughness: 0.9
-        })
-        const rock = new THREE.Mesh(rockGeometry, rockMaterial)
-        rock.position.set(
-          midX + (Math.random() - 0.5) * 6,
-          0.3 + Math.random() * 0.3,
-          midZ + (Math.random() - 0.5) * 6
-        )
-        rock.castShadow = true
-        stream.add(rock)
-      }
-    }
-
-    // 溪边植物
-    for (let i = 0; i < 15; i++) {
-      const t = Math.random()
-      const point = pathPoints[Math.floor(t * (pathPoints.length - 1))]
-      const offset = (Math.random() - 0.5) * 15
-      this.createTree(stream, point.x + offset, 0, point.z + offset)
-    }
-
-    this.sceneManager.scene.add(stream)
-    return stream
   }
 
   /**

@@ -330,79 +330,6 @@ export class EquipmentFactory {
   }
 
   /**
-   * 创建选矿设备
-   */
-  createProcessingPlant(position = { x: 0, y: 0, z: 0 }) {
-    const plant = new THREE.Group()
-
-    // 厂房主体
-    const buildingGeometry = new THREE.BoxGeometry(30, 20, 40)
-    const buildingMaterial = new THREE.MeshStandardMaterial({
-      color: 0xCCCCCC,
-      roughness: 0.7,
-      metalness: 0.3
-    })
-    const building = new THREE.Mesh(buildingGeometry, buildingMaterial)
-    building.position.y = 10
-    building.castShadow = true
-    building.receiveShadow = true
-    plant.add(building)
-
-    // 屋顶
-    const roofGeometry = new THREE.BoxGeometry(32, 2, 42)
-    const roofMaterial = new THREE.MeshStandardMaterial({
-      color: 0x999999,
-      roughness: 0.8
-    })
-    const roof = new THREE.Mesh(roofGeometry, roofMaterial)
-    roof.position.y = 21
-    roof.castShadow = true
-    plant.add(roof)
-
-    // 烟囱
-    const chimneyGeometry = new THREE.CylinderGeometry(2, 2.5, 25, 12)
-    const chimneyMaterial = new THREE.MeshStandardMaterial({
-      color: 0x666666,
-      roughness: 0.6,
-      metalness: 0.4
-    })
-    const chimney = new THREE.Mesh(chimneyGeometry, chimneyMaterial)
-    chimney.position.set(10, 22.5, 15)
-    chimney.castShadow = true
-    plant.add(chimney)
-
-    // 储料仓
-    const siloGeometry = new THREE.CylinderGeometry(4, 5, 18, 12)
-    const siloMaterial = new THREE.MeshStandardMaterial({
-      color: 0x888888,
-      roughness: 0.5,
-      metalness: 0.6
-    })
-    const silo = new THREE.Mesh(siloGeometry, siloMaterial)
-    silo.position.set(-12, 11, -10)
-    silo.castShadow = true
-    plant.add(silo)
-
-    // 皮带输送机
-    const conveyorGeometry = new THREE.BoxGeometry(25, 1, 3)
-    const conveyorMaterial = new THREE.MeshStandardMaterial({
-      color: 0x333333,
-      roughness: 0.9,
-      metalness: 0.1
-    })
-    const conveyor = new THREE.Mesh(conveyorGeometry, conveyorMaterial)
-    conveyor.position.set(0, 5, -15)
-    conveyor.castShadow = true
-    plant.add(conveyor)
-
-    plant.position.set(position.x, position.y, position.z)
-    this.scene.add(plant)
-    this.equipmentObjects.push(plant)
-
-    return plant
-  }
-
-  /**
    * 创建测量设备
    */
   createSurveyEquipment(position = { x: 0, y: 0, z: 0 }) {
@@ -582,41 +509,6 @@ export class EquipmentFactory {
     this.equipmentObjects.push(office)
 
     return office
-  }
-
-  /**
-   * 创建帐篷
-   */
-  createTent(position = { x: 0, y: 0, z: 0 }) {
-    const tent = new THREE.Group()
-
-    // 帐篷主体
-    const tentGeometry = new THREE.ConeGeometry(6, 8, 4)
-    const tentMaterial = new THREE.MeshStandardMaterial({
-      color: 0x8B4513,
-      roughness: 0.9
-    })
-    const tentMesh = new THREE.Mesh(tentGeometry, tentMaterial)
-    tentMesh.position.y = 4
-    tentMesh.rotation.y = Math.PI / 4
-    tentMesh.castShadow = true
-    tent.add(tentMesh)
-
-    // 入口
-    const entranceGeometry = new THREE.BoxGeometry(3, 4, 0.1)
-    const entranceMaterial = new THREE.MeshStandardMaterial({
-      color: 0x654321,
-      roughness: 0.9
-    })
-    const entrance = new THREE.Mesh(entranceGeometry, entranceMaterial)
-    entrance.position.set(0, 2, 4)
-    tent.add(entrance)
-
-    tent.position.set(position.x, position.y, position.z)
-    this.scene.add(tent)
-    this.equipmentObjects.push(tent)
-
-    return tent
   }
 
   /**

@@ -314,7 +314,7 @@ export const safetyData = {
       responsible: '安全科、技术科'
     },
     monthly: {
-      items: ['tailings', 'auxiliary'],
+      items: ['tailings'],
       frequency: '每月',
       responsible: '总工程师、安全总监'
     }

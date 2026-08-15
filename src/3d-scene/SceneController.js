@@ -8,8 +8,6 @@ import ExplorationStage from "./stages/ExplorationStage.js";
 import OpenPitStage from "./stages/OpenPitStage.js";
 import UndergroundStage from "./stages/UndergroundStage.js";
 import ReclamationStage from "./stages/ReclamationStage.js";
-import AuxiliaryStage from "./stages/AuxiliaryStage.js";
-import { stageData } from "../config/index.js";
 
 export class SceneController {
   constructor(container) {
@@ -23,7 +21,6 @@ export class SceneController {
       "open-pit": OpenPitStage, // 露天开采
       underground: UndergroundStage, // 地下开采
       reclamation: ReclamationStage, // 生态治理闭坑复垦
-      auxiliary: AuxiliaryStage, // 辅助生产系统（作为开采阶段支持系统）
     };
 
     // 初始化阶段类
@@ -83,9 +80,6 @@ export class SceneController {
     try {
       // 保存旧阶段ID
       const oldStage = this.currentStage;
-
-      // 设置过渡状态
-      const transitioning = this.currentStage !== null;
 
       // 彻底清除旧阶段的所有对象和SceneManager的基础地形
       if (oldStage !== null) {
@@ -169,20 +163,6 @@ export class SceneController {
         position: new THREE.Vector3(250, 80, 250),
         target: new THREE.Vector3(0, 10, 0),
       },
-      auxiliary: {
-        // 辅助生产系统
-        position: new THREE.Vector3(150, 80, 150),
-        target: new THREE.Vector3(0, 5, 0),
-      },
-      // 保持向后兼容
-      openPit: {
-        position: new THREE.Vector3(200, 150, 200),
-        target: new THREE.Vector3(0, -30, 0),
-      },
-      rehabilitation: {
-        position: new THREE.Vector3(200, 100, 200),
-        target: new THREE.Vector3(0, 20, 0),
-      },
     };
 
     const target = cameraPositions[stageId];
@@ -236,35 +216,9 @@ export class SceneController {
         duration: "5-10年",
         color: "#4CAF50",
       },
-      auxiliary: {
-        // 辅助生产系统
-        id: "auxiliary",
-        name: "辅助生产系统",
-        nameEn: "Auxiliary Systems",
-        description: "保障矿山安全生产和高效运行的各种辅助设施系统",
-        duration: "持续运行",
-        color: "#4CAF50",
-      },
-      // 保持向后兼容
-      openPit: {
-        id: "openPit",
-        name: "露天开采阶段",
-        nameEn: "Open Pit Mining",
-        description: "采用台阶式开采方法，自上而下分层剥离和采矿",
-        duration: "10-30年",
-        color: "#FF9800",
-      },
-      rehabilitation: {
-        id: "rehabilitation",
-        name: "生态修复阶段",
-        nameEn: "Ecological Rehabilitation",
-        description: "矿山闭坑后的生态环境恢复和土地利用",
-        duration: "3-10年",
-        color: "#4CAF50",
-      },
     };
 
-    return stageInfo[stageId] || stageInfo[stageId.replace("-", "")] || null;
+    return stageInfo[stageId] || null;
   }
 
   /**

@@ -12,97 +12,6 @@ export class TerrainGenerator {
   }
 
   /**
-   * 创建矿山地形
-   * @param {Object} options - 地形配置选项
-   */
-  createMiningTerrain(options = {}) {
-    // 在创建新地形前清除所有旧地形
-    this.clearAll()
-    const {
-      width = 500,
-      depth = 500,
-      segments = 100,
-      maxHeight = 50,
-      minHeight = -30, // 允许形成矿坑
-      noiseScale = 0.02,
-      baseColor = 0x8B7355,
-      rockColor = 0x696969
-    } = options
-
-    // 创建地形几何体
-    const geometry = new THREE.PlaneGeometry(width, depth, segments, segments)
-
-    // 生成高度图
-    const vertices = geometry.attributes.position.array
-    const colors = []
-
-    for (let i = 0; i < vertices.length; i += 3) {
-      const x = vertices[i]
-      const y = vertices[i + 1]
-
-      // 计算到中心的距离
-      const distanceFromCenter = Math.sqrt(x * x + y * y)
-      const normalizedDistance = distanceFromCenter / (width * 0.4)
-
-      // 基础地形噪波
-      let height = this.generateNoise(x, y, noiseScale) * maxHeight
-
-      // 在中心区域形成矿坑
-      if (normalizedDistance < 1) {
-        const pitFactor = 1 - normalizedDistance
-        const pitDepth = Math.pow(pitFactor, 2) * (maxHeight + Math.abs(minHeight))
-        height -= pitDepth * 0.8
-
-        // 添加台阶效果（露天矿特征）
-        const stepCount = 8
-        const stepHeight = 8
-        const stepWidth = 30
-        for (let s = 0; s < stepCount; s++) {
-          const stepInnerRadius = s * stepWidth
-          const stepOuterRadius = (s + 1) * stepWidth
-          if (distanceFromCenter > stepInnerRadius && distanceFromCenter < stepOuterRadius) {
-            height = -s * stepHeight + Math.random() * 2
-            break
-          }
-        }
-      }
-
-      // 添加道路
-      if (this.isRoadPosition(x, y)) {
-        height = Math.max(height, 2) // 道路保持平坦
-      }
-
-      vertices[i + 2] = height
-
-      // 计算顶点颜色
-      const color = this.calculateTerrainColor(height, maxHeight, baseColor, rockColor)
-      colors.push(color.r, color.g, color.b)
-    }
-
-    // 设置顶点颜色
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
-    geometry.computeVertexNormals()
-
-    // 创建材质
-    const material = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.9,
-      metalness: 0.0,
-      flatShading: false
-    })
-
-    const terrain = new THREE.Mesh(geometry, material)
-    terrain.rotation.x = -Math.PI / 2
-    terrain.receiveShadow = true
-    terrain.castShadow = true
-
-    this.scene.add(terrain)
-    this.terrainMeshes.push(terrain)
-
-    return terrain
-  }
-
-  /**
    * 生成地形噪波
    */
   generateNoise(x, y, scale) {
@@ -115,158 +24,56 @@ export class TerrainGenerator {
   }
 
   /**
-   * 判断是否为道路位置
+   * 创建地下矿地形（入口和地表设施）
+   * 地下开采地表应为自然平整地貌，不应出现露天矿坑
    */
-  isRoadPosition(x, y) {
-    // 创建通往矿坑的螺旋道路
-    const angle = Math.atan2(y, x)
-    const distance = Math.sqrt(x * x + y * y)
-
-    // 主干道
-    if (Math.abs(angle - Math.PI / 4) < 0.1 && distance > 50 && distance < 200) {
-      return true
-    }
-
-    // 环形道路
-    for (let r = 60; r < 180; r += 30) {
-      if (Math.abs(distance - r) < 8) {
-        return true
-      }
-    }
-
-    return false
-  }
-
-  /**
-   * 根据高度计算地形颜色
-   */
-  calculateTerrainColor(height, maxHeight, baseColor, rockColor) {
-    const base = new THREE.Color(baseColor)
-    const rock = new THREE.Color(rockColor)
-
-    // 归一化高度
-    const normalizedHeight = (height + 50) / (maxHeight + 50)
-
-    if (normalizedHeight < 0.3) {
-      // 低洼地区 - 深色
-      return base.clone().multiplyScalar(0.6)
-    } else if (normalizedHeight < 0.6) {
-      // 中等高度 - 基础颜色
-      return base
-    } else {
-      // 高地 - 岩石颜色混合
-      const mixFactor = (normalizedHeight - 0.6) / 0.4
-      return base.clone().lerp(rock, mixFactor)
-    }
-  }
-
-  /**
-   * 创建勘探地形
-   */
-  createExplorationTerrain() {
-    return this.createMiningTerrain({
-      width: 400,
-      depth: 400,
-      segments: 80,
-      maxHeight: 30,
-      minHeight: -10,
-      noiseScale: 0.015,
-      baseColor: 0x8B7355,
-      rockColor: 0x6B6B6B
-    })
-  }
-
-  /**
-   * 创建露天矿地形（真正的楼梯式台阶）
-   */
-  createOpenPitTerrain() {
+  createUndergroundTerrain() {
     // 在创建新地形前清除所有旧地形
     this.clearAll()
 
     const width = 500
     const depth = 500
     const segments = 120
-    const maxHeight = 80
-    const baseColor = 0x8B7355
-    const rockColor = 0x5A5A5A
+    const maxHeight = 20
+    const flatRadius = 200 // 中心平整区，覆盖井口及地表设施
 
-    // 创建地形几何体
     const geometry = new THREE.PlaneGeometry(width, depth, segments, segments)
-
-    // 生成高度图
     const vertices = geometry.attributes.position.array
     const colors = []
 
-    // 楼梯式台阶参数
-    const benchHeight = 20
-    const benchDepth = 35
-    const slopeDepth = 15
-    const benchWidth = 120
-    const numBenches = 6
+    const grassColor = new THREE.Color(0x7BA05B) // 草地绿
+    const rockColor = new THREE.Color(0x6B6B6B)  // 岩石灰
 
     for (let i = 0; i < vertices.length; i += 3) {
       const x = vertices[i]
       const y = vertices[i + 1]
+      const distance = Math.sqrt(x * x + y * y)
 
-      // 基础地形噪波
-      let height = this.generateNoise(x, y, 0.025) * maxHeight
-
-      // 检查是否在楼梯式台阶区域内
-      const isInBenchArea = Math.abs(x) <= benchWidth / 2 + 20 // 稍微扩大边界
-      const isInPitDirection = y <= 20 && y >= -(numBenches * (benchDepth + slopeDepth) + 50)
-
-      if (isInBenchArea && isInPitDirection) {
-        // 计算当前点在哪一层台阶上
-        let foundBench = false
-
-        for (let b = 0; b < numBenches; b++) {
-          const benchZStart = -b * (benchDepth + slopeDepth)
-          const benchZEnd = benchZStart + benchDepth
-
-          // 检查是否在当前台阶的平台上
-          if (y >= benchZStart && y <= benchZEnd) {
-            height = -b * (benchHeight + 2) // 台阶深度
-            foundBench = true
-            break
-          }
-
-          // 检查是否在连接坡道上
-          const slopeZStart = benchZEnd
-          const slopeZEnd = benchZStart - (b < numBenches - 1 ? slopeDepth : 0)
-          if (b < numBenches - 1 && y >= slopeZEnd && y <= slopeZStart) {
-            // 在坡道上，线性过渡高度
-            const slopeProgress = (slopeZStart - y) / slopeDepth
-            const currentBenchDepth = -b * (benchHeight + 2)
-            const nextBenchDepth = -(b + 1) * (benchHeight + 2)
-            height = currentBenchDepth + (nextBenchDepth - currentBenchDepth) * slopeProgress
-            foundBench = true
-            break
-          }
-        }
-
-        // 如果不在任何台阶上，则在底部区域
-        if (!foundBench && y < -(numBenches - 1) * (benchDepth + slopeDepth)) {
-          height = -(numBenches - 1) * (benchHeight + 2) - 5 // 底部平台
-        }
+      let height
+      if (distance < flatRadius) {
+        // 中心平整区：井口、井架及地表设施所在区域
+        height = 0
+      } else {
+        // 外围自然丘陵地貌
+        const hillFactor = Math.min((distance - flatRadius) / 150, 1)
+        height = this.generateNoise(x, y, 0.015) * maxHeight * hillFactor
       }
 
       vertices[i + 2] = height
 
-      // 计算顶点颜色
-      const color = this.calculateTerrainColor(height, maxHeight, baseColor, rockColor)
+      // 低洼处偏草地绿，高处偏岩石色
+      const t = Math.min(Math.max(height / maxHeight, 0), 1)
+      const color = grassColor.clone().lerp(rockColor, t * 0.7)
       colors.push(color.r, color.g, color.b)
     }
 
-    // 设置顶点颜色
     geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
     geometry.computeVertexNormals()
 
-    // 创建材质
     const material = new THREE.MeshStandardMaterial({
       vertexColors: true,
       roughness: 0.9,
-      metalness: 0.0,
-      flatShading: false
+      metalness: 0.0
     })
 
     const terrain = new THREE.Mesh(geometry, material)
@@ -276,24 +83,6 @@ export class TerrainGenerator {
 
     this.scene.add(terrain)
     this.terrainMeshes.push(terrain)
-
-    return terrain
-  }
-
-  /**
-   * 创建地下矿地形（入口和地表设施）
-   */
-  createUndergroundTerrain() {
-    const terrain = this.createMiningTerrain({
-      width: 450,
-      depth: 450,
-      segments: 100,
-      maxHeight: 60,
-      minHeight: -20,
-      noiseScale: 0.02,
-      baseColor: 0x7B7355,
-      rockColor: 0x5A5A5A
-    })
 
     // 添加竖井位置标记
     this.addShaftPosition(50, 50)
@@ -330,81 +119,72 @@ export class TerrainGenerator {
   }
 
   /**
-   * 创建生态修复地形
+   * 创建生态修复地形（复垦后的平滑盆地，无环形台阶）
+   * 中心为平滑的复垦盆地（可蓄水成湖），外围为平整复垦地面
    */
   createRehabilitationTerrain() {
-    const terrain = this.createMiningTerrain({
-      width: 500,
-      depth: 500,
-      segments: 100,
-      maxHeight: 40,
-      minHeight: -30,
-      noiseScale: 0.015,
-      baseColor: 0x4A7C59, // 更绿的基底色
-      rockColor: 0x5A5A5A
-    })
+    // 在创建新地形前清除所有旧地形
+    this.clearAll()
 
-    // 添加植被覆盖效果
-    this.addVegetation()
+    const width = 500
+    const depth = 500
+    const segments = 120
+    const basinRadius = 80     // 盆地边缘半径
+    const flatRadius = 45      // 盆地平底半径（湖面区域）
+    const basinDepth = 8       // 盆地深度（复垦后已回填整形，较浅）
 
-    return terrain
-  }
+    const geometry = new THREE.PlaneGeometry(width, depth, segments, segments)
+    const vertices = geometry.attributes.position.array
+    const colors = []
 
-  /**
-   * 添加植被
-   */
-  addVegetation() {
-    const treePositions = []
+    const deepGrassColor = new THREE.Color(0x3E7A46) // 盆地低处深绿
+    const grassColor = new THREE.Color(0x6B9E5A)     // 草地绿
 
-    // 在地形高处生成树木
-    for (let i = 0; i < 50; i++) {
-      const x = (Math.random() - 0.5) * 400
-      const z = (Math.random() - 0.5) * 400
-      const distance = Math.sqrt(x * x + z * z)
+    for (let i = 0; i < vertices.length; i += 3) {
+      const x = vertices[i]
+      const y = vertices[i + 1]
+      const distance = Math.sqrt(x * x + y * y)
 
-      if (distance > 80) { // 避开矿坑区域
-        treePositions.push({ x, z })
+      let height
+      if (distance < flatRadius) {
+        // 盆地平底（原矿坑底部，已回填平整）
+        height = -basinDepth
+      } else if (distance < basinRadius) {
+        // 盆地缓坡：从平底平滑过渡到地表
+        const t = (distance - flatRadius) / (basinRadius - flatRadius)
+        const smooth = (1 - Math.cos(t * Math.PI)) / 2
+        height = -basinDepth * (1 - smooth)
+      } else {
+        // 外围为平整复垦地面，保证树木、石头、设施不悬空
+        height = 0
       }
+
+      vertices[i + 2] = height
+
+      // 低处偏深绿（盆地），高处偏草地绿
+      const colorT = Math.min(Math.max((height + basinDepth) / basinDepth, 0), 1)
+      const color = deepGrassColor.clone().lerp(grassColor, colorT)
+      colors.push(color.r, color.g, color.b)
     }
 
-    treePositions.forEach(pos => {
-      this.createTree(pos.x, pos.z)
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+    geometry.computeVertexNormals()
+
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0.0
     })
-  }
 
-  /**
-   * 创建单棵树
-   */
-  createTree(x, z) {
-    const tree = new THREE.Group()
+    const terrain = new THREE.Mesh(geometry, material)
+    terrain.rotation.x = -Math.PI / 2
+    terrain.receiveShadow = true
+    terrain.castShadow = true
 
-    // 树干
-    const trunkGeometry = new THREE.CylinderGeometry(0.5, 0.8, 4, 8)
-    const trunkMaterial = new THREE.MeshStandardMaterial({
-      color: 0x4A3728,
-      roughness: 0.9
-    })
-    const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial)
-    trunk.position.y = 2
-    trunk.castShadow = true
-    tree.add(trunk)
+    this.scene.add(terrain)
+    this.terrainMeshes.push(terrain)
 
-    // 树冠
-    const foliageGeometry = new THREE.ConeGeometry(2, 6, 8)
-    const foliageMaterial = new THREE.MeshStandardMaterial({
-      color: 0x2E8B57,
-      roughness: 0.8
-    })
-    const foliage = new THREE.Mesh(foliageGeometry, foliageMaterial)
-    foliage.position.y = 6
-    foliage.castShadow = true
-    tree.add(foliage)
-
-    tree.position.set(x, 0, z)
-    tree.scale.setScalar(0.8 + Math.random() * 0.4)
-
-    this.scene.add(tree)
-    this.terrainMeshes.push(tree)
+    return terrain
   }
 
   /**

@@ -87,6 +87,31 @@ export class SceneController {
       // 设置过渡状态
       const transitioning = this.currentStage !== null;
 
+      // 彻底清除旧阶段的所有对象和SceneManager的基础地形
+      if (oldStage !== null) {
+        console.log("清除旧阶段的所有对象:", oldStage);
+
+        // 清除旧阶段的对象
+        if (this.stages[oldStage] && this.stages[oldStage].dispose) {
+          this.stages[oldStage].dispose();
+        }
+
+        // 彻底清除场景管理器中的所有对象，包括基础地形
+        this.thoroughlyClearScene();
+
+        // 强制清除SceneManager的基础地形
+        if (this.sceneManager.objects?.terrain) {
+          this.sceneManager.scene.remove(this.sceneManager.objects.terrain);
+          if (this.sceneManager.objects.terrain.geometry) {
+            this.sceneManager.objects.terrain.geometry.dispose();
+          }
+          if (this.sceneManager.objects.terrain.material) {
+            this.sceneManager.objects.terrain.material.dispose();
+          }
+          this.sceneManager.objects.terrain = null;
+        }
+      }
+
       console.log("开始构建场景，阶段:", stageId);
       // 构建新场景
       this.stages[stageId].build();
@@ -106,6 +131,7 @@ export class SceneController {
         stageData: this.getStageData(stageId),
       };
       console.log("SceneController: 发出stage-changed事件", eventData);
+      console.log("SceneController: 当前阶段已设置为:", this.currentStage);
       this.emit("stage-changed", eventData);
 
       console.log("SceneController: 阶段切换完成，发出stage-changed事件", {
@@ -292,6 +318,54 @@ export class SceneController {
   initialize() {
     // 默认加载勘探阶段
     this.switchToStage("exploration");
+  }
+
+  /**
+   * 彻底清除场景中所有对象
+   */
+  thoroughlyClearScene() {
+    const scene = this.sceneManager.scene;
+    const objectsToRemove = [];
+
+    // 遍历场景中的所有对象
+    scene.traverse((object) => {
+      // 排除相机和光源等核心对象
+      if (object.isMesh &&
+          object !== this.sceneManager.objects?.terrain &&
+          !this.isLight(object)) {
+        objectsToRemove.push(object);
+      }
+    });
+
+    // 移除找到的对象
+    objectsToRemove.forEach(obj => {
+      scene.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+
+      // 递归处理子对象
+      obj.traverse(child => {
+        if (child.isMesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        }
+      });
+    });
+
+    console.log(`彻底清除了 ${objectsToRemove.length} 个场景对象`);
+  }
+
+  /**
+   * 检查对象是否是光源
+   */
+  isLight(object) {
+    if (!object || !object.type) return false;
+    return object.type === 'AmbientLight' ||
+           object.type === 'DirectionalLight' ||
+           object.type === 'HemisphereLight' ||
+           object.type === 'PointLight' ||
+           object.type === 'SpotLight' ||
+           object.type === 'RectAreaLight';
   }
 
   /**

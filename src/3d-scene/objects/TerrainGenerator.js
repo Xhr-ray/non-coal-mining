@@ -177,19 +177,107 @@ export class TerrainGenerator {
   }
 
   /**
-   * 创建露天矿地形
+   * 创建露天矿地形（真正的楼梯式台阶）
    */
   createOpenPitTerrain() {
-    return this.createMiningTerrain({
-      width: 500,
-      depth: 500,
-      segments: 120,
-      maxHeight: 80,
-      minHeight: -120,
-      noiseScale: 0.025,
-      baseColor: 0x8B7355,
-      rockColor: 0x5A5A5A
+    // 在创建新地形前清除所有旧地形
+    this.clearAll()
+
+    const width = 500
+    const depth = 500
+    const segments = 120
+    const maxHeight = 80
+    const baseColor = 0x8B7355
+    const rockColor = 0x5A5A5A
+
+    // 创建地形几何体
+    const geometry = new THREE.PlaneGeometry(width, depth, segments, segments)
+
+    // 生成高度图
+    const vertices = geometry.attributes.position.array
+    const colors = []
+
+    // 楼梯式台阶参数
+    const benchHeight = 20
+    const benchDepth = 35
+    const slopeDepth = 15
+    const benchWidth = 120
+    const numBenches = 6
+
+    for (let i = 0; i < vertices.length; i += 3) {
+      const x = vertices[i]
+      const y = vertices[i + 1]
+
+      // 基础地形噪波
+      let height = this.generateNoise(x, y, 0.025) * maxHeight
+
+      // 检查是否在楼梯式台阶区域内
+      const isInBenchArea = Math.abs(x) <= benchWidth / 2 + 20 // 稍微扩大边界
+      const isInPitDirection = y <= 20 && y >= -(numBenches * (benchDepth + slopeDepth) + 50)
+
+      if (isInBenchArea && isInPitDirection) {
+        // 计算当前点在哪一层台阶上
+        let foundBench = false
+
+        for (let b = 0; b < numBenches; b++) {
+          const benchZStart = -b * (benchDepth + slopeDepth)
+          const benchZEnd = benchZStart + benchDepth
+
+          // 检查是否在当前台阶的平台上
+          if (y >= benchZStart && y <= benchZEnd) {
+            height = -b * (benchHeight + 2) // 台阶深度
+            foundBench = true
+            break
+          }
+
+          // 检查是否在连接坡道上
+          const slopeZStart = benchZEnd
+          const slopeZEnd = benchZStart - (b < numBenches - 1 ? slopeDepth : 0)
+          if (b < numBenches - 1 && y >= slopeZEnd && y <= slopeZStart) {
+            // 在坡道上，线性过渡高度
+            const slopeProgress = (slopeZStart - y) / slopeDepth
+            const currentBenchDepth = -b * (benchHeight + 2)
+            const nextBenchDepth = -(b + 1) * (benchHeight + 2)
+            height = currentBenchDepth + (nextBenchDepth - currentBenchDepth) * slopeProgress
+            foundBench = true
+            break
+          }
+        }
+
+        // 如果不在任何台阶上，则在底部区域
+        if (!foundBench && y < -(numBenches - 1) * (benchDepth + slopeDepth)) {
+          height = -(numBenches - 1) * (benchHeight + 2) - 5 // 底部平台
+        }
+      }
+
+      vertices[i + 2] = height
+
+      // 计算顶点颜色
+      const color = this.calculateTerrainColor(height, maxHeight, baseColor, rockColor)
+      colors.push(color.r, color.g, color.b)
+    }
+
+    // 设置顶点颜色
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+    geometry.computeVertexNormals()
+
+    // 创建材质
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0.0,
+      flatShading: false
     })
+
+    const terrain = new THREE.Mesh(geometry, material)
+    terrain.rotation.x = -Math.PI / 2
+    terrain.receiveShadow = true
+    terrain.castShadow = true
+
+    this.scene.add(terrain)
+    this.terrainMeshes.push(terrain)
+
+    return terrain
   }
 
   /**

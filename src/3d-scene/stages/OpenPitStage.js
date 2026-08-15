@@ -1,5 +1,5 @@
 /**
- * 露天开采阶段场景构建器
+ * 露天开采阶段场景构建器 - 重新构建版本（真正的圆形台阶矿坑）
  */
 import * as THREE from 'three'
 import { TerrainGenerator } from '../objects/TerrainGenerator.js'
@@ -18,85 +18,414 @@ export class OpenPitStage {
    * 构建露天开采场景
    */
   build() {
+    console.log('OpenPitStage: 开始构建露天开采场景');
+
     // 清除现有场景
     this.sceneManager.clearScene()
     this.clearPreviousObjects()
 
-    // 创建露天矿坑地形
-    this.createTerrain()
+    // 强制清除SceneManager的基础地形（这是造成遮挡的主要原因）
+    if (this.sceneManager.objects?.terrain) {
+      console.log('OpenPitStage: 强制清除SceneManager基础地形');
+      this.sceneManager.scene.remove(this.sceneManager.objects.terrain);
+      if (this.sceneManager.objects.terrain.geometry) {
+        this.sceneManager.objects.terrain.geometry.dispose();
+      }
+      if (this.sceneManager.objects.terrain.material) {
+        this.sceneManager.objects.terrain.material.dispose();
+      }
+      this.sceneManager.objects.terrain = null;
+    }
 
-    // 创建边坡台阶特征
-    this.createSlopeFeatures()
+    // 创建圆形台阶矿坑地形
+    this.createCircularPitTerrain();
 
-    // 创建采矿设备
-    this.createMiningEquipment()
+    // 创建台阶细节和边缘
+    this.createBenchDetails();
+
+    // 创建采矿设备（在第3、4层台阶）
+    this.createMiningEquipment();
 
     // 创建运输系统
-    this.createTransportSystem()
+    this.createTransportSystem();
 
     // 创建破碎系统
-    this.createCrushingSystem()
+    this.createCrushingSystem();
 
     // 创建辅助设施
-    this.createAuxiliaryFacilities()
+    this.createAuxiliaryFacilities();
 
     // 添加热点
-    this.addHotspots()
+    this.addHotspots();
 
     // 设置相机位置
-    this.setupCamera()
+    this.setupCamera();
+
+    console.log('OpenPitStage: 露天开采场景构建完成');
   }
 
   /**
-   * 创建地形
+   * 创建圆形台阶矿坑地形
    */
-  createTerrain() {
-    const terrain = this.terrainGenerator.createOpenPitTerrain()
-    this.sceneObjects.push(terrain)
-  }
+  createCircularPitTerrain() {
+    // 矿坑参数
+    const pitParams = {
+      totalDepth: 120,        // 总深度120米
+      outerRadius: 150,       // 最外层半径150米
+      bottomRadius: 30,       // 坑底半径30米
+      benchCount: 6,          // 6层台阶
+      benchHeight: 20,        // 每层高度20米
+      benchWidth: 25          // 每层宽度25米
+    }
 
-  /**
-   * 创建采矿设备
-   */
-  createMiningEquipment() {
-    // 大型挖掘机（在矿坑底部）
-    const excavatorPositions = [
-      { x: 30, y: -80, z: 30 },
-      { x: -20, y: -60, z: 40 },
-      { x: 40, y: -40, z: -30 }
-    ]
+    // 创建大平面地形 - 必须足够大以覆盖整个视野，防止看到边缘
+    const planeGeometry = new THREE.PlaneGeometry(800, 800, 200, 200)
+    const vertices = planeGeometry.attributes.position.array
+    const colors = []
 
-    excavatorPositions.forEach(pos => {
-      const excavator = this.equipmentFactory.createExcavator(pos)
-      // 调整挖掘机到正确的标高
-      excavator.position.y = pos.y
-      this.sceneObjects.push(excavator)
+    for (let i = 0; i < vertices.length; i += 3) {
+      const x = vertices[i]
+      const y = vertices[i + 1]
+
+      // 计算距离中心的距离
+      const distance = Math.sqrt(x * x + y * y)
+
+      let height = 0 // 地表高度
+
+      if (distance > pitParams.outerRadius + 100) {
+        // 矿坑外围的自然地形
+        const terrainNoise = Math.sin(x * 0.01) * Math.cos(y * 0.01) * 5 +
+                             Math.sin(x * 0.03 + 1) * Math.cos(y * 0.03 + 2) * 3
+        height = terrainNoise // 保持在地表高度
+      } else if (distance < pitParams.bottomRadius) {
+        // 矿坑底部平地 - 深度从地表开始计算
+        height = -pitParams.totalDepth
+      } else if (distance > pitParams.outerRadius) {
+        // 过渡区域
+        const transitionFactor = (distance - pitParams.outerRadius) / 50
+        height = -transitionFactor * 5
+      } else {
+        // 计算当前点在哪一层台阶上
+        const currentRadius = pitParams.outerRadius
+        const radiusStep = (pitParams.outerRadius - pitParams.bottomRadius) / pitParams.benchCount
+
+        for (let bench = 0; bench < pitParams.benchCount; bench++) {
+          const outerRadius = currentRadius - bench * radiusStep
+          const innerRadius = outerRadius - pitParams.benchWidth
+
+          if (distance <= outerRadius && distance >= innerRadius) {
+            // 在该层台阶的工作面上
+            height = -bench * pitParams.benchHeight // 从地表开始逐层下降
+            break
+          } else if (bench < pitParams.benchCount - 1) {
+            const nextOuterRadius = currentRadius - (bench + 1) * radiusStep
+            // 在该层台阶的斜坡上
+            if (distance < innerRadius && distance >= nextOuterRadius) {
+              // 线性插值计算斜坡高度
+              const slopeProgress = (innerRadius - distance) / (innerRadius - nextOuterRadius)
+              const currentHeight = -bench * pitParams.benchHeight
+              const nextHeight = -(bench + 1) * pitParams.benchHeight
+              height = currentHeight - slopeProgress * pitParams.benchHeight
+              break
+            }
+          }
+        }
+      }
+
+      vertices[i + 2] = height
+
+      // 计算地形颜色
+      const color = this.calculateTerrainColor(distance, height, pitParams)
+      colors.push(color.r, color.g, color.b)
+    }
+
+    // 设置顶点颜色
+    planeGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3))
+    planeGeometry.computeVertexNormals()
+
+    // 创建材质
+    const material = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0.0,
+      flatShading: true,
+      side: THREE.DoubleSide // 双面渲染，确保从任何角度都能看到
     })
 
-    // 钻机（用于爆破孔）
-    const drillRig = this.equipmentFactory.createDrillingRig({ x: -30, y: -50, z: -20 })
-    drillRig.position.y = -50
-    this.sceneObjects.push(drillRig)
+    const terrain = new THREE.Mesh(planeGeometry, material)
+    terrain.rotation.x = -Math.PI / 2
+    terrain.position.y = 0 // 确保地形在正确位置
+    terrain.receiveShadow = true
+    terrain.castShadow = true
+
+    this.sceneManager.scene.add(terrain)
+    this.sceneObjects.push(terrain)
+
+    // 也将地形添加到terrainGenerator的跟踪列表中，确保能被正确清除
+    this.terrainGenerator.terrainMeshes.push(terrain)
+
+    console.log('OpenPitStage: 圆形台阶矿坑地形创建完成')
+  }
+
+  /**
+   * 计算地形颜色
+   */
+  calculateTerrainColor(distance, height, pitParams) {
+    if (distance > pitParams.outerRadius + 50) {
+      // 外围自然地形 - 绿色
+      return new THREE.Color(0x6B8E23)
+    } else if (distance > pitParams.outerRadius) {
+      // 过渡区域 - 混合颜色
+      return new THREE.Color(0x7A8B45)
+    } else if (distance < pitParams.bottomRadius) {
+      // 矿坑底部 - 深色土质
+      return new THREE.Color(0x4A3A25)
+    } else {
+      // 台阶区域 - 根据深度变化
+      const depthFactor = Math.abs(height) / pitParams.totalDepth
+      const topColor = new THREE.Color(0x8B7355) // 浅土色
+      const bottomColor = new THREE.Color(0x5A4A35) // 深土色
+      return topColor.clone().lerp(bottomColor, depthFactor)
+    }
+  }
+
+  /**
+   * 创建台阶细节和边缘
+   */
+  createBenchDetails() {
+    const pitParams = {
+      outerRadius: 150,
+      bottomRadius: 30,
+      benchCount: 6,
+      benchHeight: 20,
+      benchWidth: 25
+    }
+
+    const radiusStep = (pitParams.outerRadius - pitParams.bottomRadius) / pitParams.benchCount
+
+    // 为每层台阶创建细节
+    for (let bench = 0; bench < pitParams.benchCount; bench++) {
+      const outerRadius = pitParams.outerRadius - bench * radiusStep
+      const innerRadius = outerRadius - pitParams.benchWidth
+      const benchDepth = -bench * pitParams.benchHeight
+
+      // 创建台阶边缘线（自然土色，不太明显）
+      this.createBenchEdgeLine(outerRadius, benchDepth)
+
+      // 创建台阶编号标识（每隔一层）
+      if (bench % 2 === 0) {
+        this.createBenchNumberMarker(outerRadius, benchDepth, bench + 1)
+      }
+    }
+  }
+
+  /**
+   * 创建台阶边缘线
+   */
+  createBenchEdgeLine(radius, depth) {
+    const edgeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x6A5A45, // 自然土色
+      side: THREE.DoubleSide
+    })
+
+    // 创建圆形边缘线
+    const edgeGeometry = new THREE.RingGeometry(radius - 0.3, radius + 0.3, 64)
+    const edge = new THREE.Mesh(edgeGeometry, edgeMaterial)
+    edge.rotation.x = -Math.PI / 2
+    edge.position.y = depth + 0.1
+
+    this.sceneManager.scene.add(edge)
+    this.sceneObjects.push(edge)
+  }
+
+  /**
+   * 创建台阶编号标识
+   */
+  createBenchNumberMarker(radius, depth, benchNumber) {
+    const markerGroup = new THREE.Group()
+
+    // 小型标识牌
+    const boardGeometry = new THREE.BoxGeometry(4, 2, 0.2)
+    const boardMaterial = new THREE.MeshStandardMaterial({
+      color: 0x8B7355,
+      roughness: 0.9
+    })
+    const board = new THREE.Mesh(boardGeometry, boardMaterial)
+    board.position.set(radius - 8, depth + 1.2, 0)
+    board.castShadow = true
+    markerGroup.add(board)
+
+    // 编号（使用简单几何体）
+    const numberMaterial = new THREE.MeshStandardMaterial({
+      color: 0xFFFFFF,
+      roughness: 0.5,
+      emissive: 0xFFFFFF,
+      emissiveIntensity: 0.1
+    })
+
+    // 简单的编号表示
+    for (let i = 0; i < benchNumber; i++) {
+      const barGeometry = new THREE.BoxGeometry(0.4, 0.3, 0.1)
+      const bar = new THREE.Mesh(barGeometry, numberMaterial)
+      bar.position.set(radius - 8 + 0.5, depth + 1.5 - i * 0.4, 0.15)
+      markerGroup.add(bar)
+    }
+
+    this.sceneManager.scene.add(markerGroup)
+    this.sceneObjects.push(markerGroup)
+  }
+
+  /**
+   * 创建采矿设备（在第3、4层台阶）
+   */
+  createMiningEquipment() {
+    const pitParams = {
+      outerRadius: 150,
+      benchCount: 6,
+      benchHeight: 20,
+      benchWidth: 25
+    }
+
+    const radiusStep = (pitParams.outerRadius - 30) / pitParams.benchCount
+
+    // 第3层台阶（深度-40米）和第4层台阶（深度-60米）
+    const equipmentBenches = [2, 3] // 0-based index
+
+    equipmentBenches.forEach(benchIndex => {
+      const outerRadius = pitParams.outerRadius - benchIndex * radiusStep
+      const innerRadius = outerRadius - pitParams.benchWidth
+      const benchDepth = -benchIndex * pitParams.benchHeight
+      const midRadius = (outerRadius + innerRadius) / 2
+
+      // 在该层台阶布置设备
+      const equipmentCount = benchIndex === 2 ? 4 : 3 // 第3层4台设备，第4层3台设备
+
+      for (let i = 0; i < equipmentCount; i++) {
+        const angle = (i / equipmentCount) * Math.PI * 2 + Math.PI / 4
+        const radius = innerRadius + 10 + Math.random() * 10
+
+        const x = Math.cos(angle) * radius
+        const z = Math.sin(angle) * radius
+
+        // 根据索引决定设备类型
+        let equipment
+        if (i % 2 === 0) {
+          // 铲车/挖掘机
+          equipment = this.equipmentFactory.createExcavator({ x, y: benchDepth, z })
+          equipment.position.y = benchDepth + 4
+        } else {
+          // 卡车
+          equipment = this.equipmentFactory.createMiningTruck({ x, z })
+          equipment.position.y = benchDepth + 3
+        }
+
+        // 设备朝向矿坑中心
+        equipment.rotation.y = -angle + Math.PI / 2
+
+        this.sceneManager.scene.add(equipment)
+        this.sceneObjects.push(equipment)
+      }
+
+      // 添加钻机在特定位置
+      if (benchIndex === 2) {
+        const drillAngle = Math.PI
+        const drillRadius = innerRadius + 15
+        const drillX = Math.cos(drillAngle) * drillRadius
+        const drillZ = Math.sin(drillAngle) * drillRadius
+
+        const drill = this.equipmentFactory.createDrillingRig({ x: drillX, y: benchDepth, z: drillZ })
+        drill.position.y = benchDepth + 8
+        drill.rotation.y = -drillAngle + Math.PI / 2
+
+        this.sceneManager.scene.add(drill)
+        this.sceneObjects.push(drill)
+      }
+    })
   }
 
   /**
    * 创建运输系统
    */
   createTransportSystem() {
-    // 重型卡车（在不同标高道路上）
+    // 创建从矿坑向外的运输道路
+    const roadGroup = new THREE.Group()
+
+    // 螺旋式运输道路参数
+    const roadPoints = []
+    for (let i = 0; i <= 120; i += 10) {
+      const angle = (i / 120) * Math.PI * 0.8
+      const radius = 160 - i * 0.8
+      const depth = -i
+
+      roadPoints.push({ angle, radius, depth })
+    }
+
+    // 创建道路段
+    roadPoints.forEach((point, index) => {
+      if (index < roadPoints.length - 1) {
+        const nextPoint = roadPoints[index + 1]
+
+        const roadGeometry = new THREE.BoxGeometry(10, 0.5, 12)
+        const roadMaterial = new THREE.MeshStandardMaterial({
+          color: 0x4A4A4A,
+          roughness: 0.9
+        })
+        const road = new THREE.Mesh(roadGeometry, roadMaterial)
+
+        const midAngle = (point.angle + nextPoint.angle) / 2
+        const midRadius = (point.radius + nextPoint.radius) / 2
+        const midDepth = (point.depth + nextPoint.depth) / 2
+
+        road.position.set(
+          Math.cos(midAngle) * midRadius,
+          midDepth + 0.25,
+          Math.sin(midAngle) * midRadius
+        )
+
+        const dx = Math.cos(nextPoint.angle) * nextPoint.radius - Math.cos(point.angle) * point.radius
+        const dz = Math.sin(nextPoint.angle) * nextPoint.radius - Math.sin(point.angle) * point.radius
+        const rotation = Math.atan2(dz, dx)
+
+        road.rotation.y = -rotation + Math.PI / 2
+        road.rotation.x = Math.atan2(nextPoint.depth - point.depth, Math.sqrt(dx * dx + dz * dz))
+
+        this.sceneManager.scene.add(road)
+        this.sceneObjects.push(road)
+      }
+    })
+
+    // 添加运输卡车
+    this.createHaulTrucks()
+  }
+
+  /**
+   * 创建运输卡车
+   */
+  createHaulTrucks() {
     const truckPositions = [
-      { x: 80, y: -30, z: 60 },
-      { x: -60, y: -20, z: 50 },
-      { x: 70, y: -40, z: -40 },
-      { x: -40, y: -10, z: -60 },
-      { x: 50, y: 0, z: 80 }
+      { angle: Math.PI / 6, radius: 145, depth: -10 },
+      { angle: Math.PI / 4, radius: 125, depth: -30 },
+      { angle: Math.PI / 3, radius: 105, depth: -50 },
+      { angle: Math.PI / 2, radius: 85, depth: -70 }
     ]
 
-    truckPositions.forEach(pos => {
-      const truck = this.equipmentFactory.createMiningTruck(pos)
-      truck.position.y = pos.y
-      // 根据道路方向调整卡车朝向
-      truck.rotation.y = Math.random() * Math.PI * 2
+    truckPositions.forEach((pos, index) => {
+      const x = Math.cos(pos.angle) * pos.radius
+      const z = Math.sin(pos.angle) * pos.radius
+
+      const truck = this.equipmentFactory.createMiningTruck({ x, z })
+      truck.position.y = pos.depth + 3
+
+      // 卡车朝向
+      if (index < truckPositions.length - 1) {
+        const nextPos = truckPositions[index + 1]
+        const nextX = Math.cos(nextPos.angle) * nextPos.radius
+        const nextZ = Math.sin(nextPos.angle) * nextPos.radius
+        const angle = Math.atan2(nextZ - z, nextX - x)
+        truck.rotation.y = -angle + Math.PI / 2
+      }
+
+      this.sceneManager.scene.add(truck)
       this.sceneObjects.push(truck)
     })
   }
@@ -105,10 +434,9 @@ export class OpenPitStage {
    * 创建破碎系统
    */
   createCrushingSystem() {
-    // 破碎站（在矿坑附近）
     const crusherPositions = [
-      { x: 100, y: 0, z: 80 },
-      { x: -100, y: 0, z: -80 }
+      { x: 180, y: 0, z: 100 },
+      { x: -180, y: 0, z: -100 }
     ]
 
     crusherPositions.forEach(pos => {
@@ -123,18 +451,18 @@ export class OpenPitStage {
   createAuxiliaryFacilities() {
     // 办公室
     const office = this.equipmentFactory.createOffice({
-      x: -120,
+      x: -180,
       y: 0,
-      z: 100
+      z: 120
     })
     this.sceneObjects.push(office)
 
     // 修理车间
-    const workshop = this.createWorkshop({ x: 120, y: 0, z: -100 })
+    const workshop = this.createWorkshop({ x: 180, y: 0, z: -120 })
     this.sceneObjects.push(workshop)
 
     // 油库
-    const fuelStation = this.createFuelStation({ x: 100, y: 0, z: -120 })
+    const fuelStation = this.createFuelStation({ x: 160, y: 0, z: -140 })
     this.sceneObjects.push(fuelStation)
 
     // 排土场标识
@@ -147,7 +475,6 @@ export class OpenPitStage {
   createWorkshop(position) {
     const workshop = new THREE.Group()
 
-    // 车间主体
     const mainGeometry = new THREE.BoxGeometry(25, 12, 20)
     const mainMaterial = new THREE.MeshStandardMaterial({
       color: 0x808080,
@@ -159,7 +486,6 @@ export class OpenPitStage {
     main.castShadow = true
     workshop.add(main)
 
-    // 大门
     const doorGeometry = new THREE.BoxGeometry(8, 8, 0.5)
     const doorMaterial = new THREE.MeshStandardMaterial({
       color: 0x606060,
@@ -168,17 +494,6 @@ export class OpenPitStage {
     const door = new THREE.Mesh(doorGeometry, doorMaterial)
     door.position.set(0, 4, 10.25)
     workshop.add(door)
-
-    // 行车起重机
-    const craneGeometry = new THREE.BoxGeometry(20, 0.5, 0.5)
-    const craneMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFF6600,
-      roughness: 0.6,
-      metalness: 0.7
-    })
-    const crane = new THREE.Mesh(craneGeometry, craneMaterial)
-    crane.position.y = 11
-    workshop.add(crane)
 
     workshop.position.set(position.x, position.y, position.z)
     this.sceneManager.scene.add(workshop)
@@ -192,7 +507,6 @@ export class OpenPitStage {
   createFuelStation(position) {
     const station = new THREE.Group()
 
-    // 储油罐
     const tankGeometry = new THREE.CylinderGeometry(5, 5, 12, 16)
     const tankMaterial = new THREE.MeshStandardMaterial({
       color: 0x333333,
@@ -211,7 +525,6 @@ export class OpenPitStage {
     tank2.castShadow = true
     station.add(tank2)
 
-    // 加油机
     const pumpGeometry = new THREE.BoxGeometry(2, 3, 2)
     const pumpMaterial = new THREE.MeshStandardMaterial({
       color: 0xFFFF00,
@@ -227,7 +540,6 @@ export class OpenPitStage {
     pump2.castShadow = true
     station.add(pump2)
 
-    // 防雨棚
     const roofGeometry = new THREE.BoxGeometry(10, 0.5, 12)
     const roofMaterial = new THREE.MeshStandardMaterial({
       color: 0x666666,
@@ -250,7 +562,6 @@ export class OpenPitStage {
   createWasteDump() {
     const dump = new THREE.Group()
 
-    // 废石堆
     for (let i = 0; i < 5; i++) {
       const pileGeometry = new THREE.ConeGeometry(15 + i * 3, 10 + i * 2, 8)
       const pileMaterial = new THREE.MeshStandardMaterial({
@@ -258,20 +569,10 @@ export class OpenPitStage {
         roughness: 0.9
       })
       const pile = new THREE.Mesh(pileGeometry, pileMaterial)
-      pile.position.set(-150 + i * 20, (10 + i * 2) / 2, -150 + i * 15)
+      pile.position.set(-200 + i * 20, (10 + i * 2) / 2, -180 + i * 15)
       pile.castShadow = true
       dump.add(pile)
     }
-
-    // 警示标志
-    const signGeometry = new THREE.BoxGeometry(3, 4, 0.3)
-    const signMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFFCC00,
-      roughness: 0.6
-    })
-    const sign = new THREE.Mesh(signGeometry, signMaterial)
-    sign.position.set(-140, 8, -140)
-    dump.add(sign)
 
     this.sceneManager.scene.add(dump)
     this.sceneObjects.push(dump)
@@ -281,45 +582,63 @@ export class OpenPitStage {
    * 添加热点
    */
   addHotspots() {
-    // 采矿作业热点
+    // 采矿作业热点（第3层台阶）
     const miningHotspot = this.sceneManager.addHotspot(
-      new THREE.Vector3(30, -65, 30),
+      new THREE.Vector3(80, -45, 60),
       {
         id: 'openpit-mining',
         title: '露天采矿作业',
-        description: '采用台阶式开采，自上而下分层剥离和采矿',
+        description: '采用圆形台阶式开采，自上而下分层剥离和采矿',
         details: [
-          '台阶高度：10-15米',
-          '工作面宽度：≥30米',
-          '坡面角：≤70°',
+          '台阶高度：20米',
+          '台阶宽度：25米',
+          '边坡角度：自然坡度',
           '开采方法：穿孔爆破-采装-运输'
         ],
-        originalPosition: new THREE.Vector3(30, -80, 30)
+        originalPosition: new THREE.Vector3(80, -40, 60)
       }
     )
     this.hotspots.push(miningHotspot)
 
     // 运输系统热点
     const transportHotspot = this.sceneManager.addHotspot(
-      new THREE.Vector3(80, -15, 60),
+      new THREE.Vector3(120, -15, 80),
       {
         id: 'openpit-transport',
         title: '矿岩运输系统',
-        description: '重型卡车将矿石运至破碎站，废石运至排土场',
+        description: '重型卡车沿螺旋道路将矿石运出矿坑',
         details: [
           '运输设备：大型矿用卡车（载重100-300吨）',
-          '运输道路：宽度15-20米，坡度≤8%',
+          '运输道路：螺旋式布置，宽度10米',
           '运输能力：500-1000万吨/年',
           '运输成本：占采矿总成本40%以上'
         ],
-        originalPosition: new THREE.Vector3(80, -30, 60)
+        originalPosition: new THREE.Vector3(120, -10, 80)
       }
     )
     this.hotspots.push(transportHotspot)
 
+    // 台阶结构热点
+    const benchHotspot = this.sceneManager.addHotspot(
+      new THREE.Vector3(-100, -25, -50),
+      {
+        id: 'openpit-bench',
+        title: '圆形台阶结构',
+        description: '同心圆形台阶设计，从外向内逐层下降',
+        details: [
+          '台阶层数：6层开采台阶',
+          '每层高度：20米',
+          '工作面：25米宽环形平台',
+          '坑底：30米半径的圆形平地'
+        ],
+        originalPosition: new THREE.Vector3(-100, -20, -50)
+      }
+    )
+    this.hotspots.push(benchHotspot)
+
     // 破碎系统热点
     const crushingHotspot = this.sceneManager.addHotspot(
-      new THREE.Vector3(100, 12, 80),
+      new THREE.Vector3(180, 12, 100),
       {
         id: 'openpit-crushing',
         title: '矿石破碎系统',
@@ -330,158 +649,28 @@ export class OpenPitStage {
           '出料粒度：150-250mm',
           '处理能力：2000-5000t/h'
         ],
-        originalPosition: new THREE.Vector3(100, 0, 80)
+        originalPosition: new THREE.Vector3(180, 0, 100)
       }
     )
     this.hotspots.push(crushingHotspot)
 
-    // 边坡监测热点
-    const slopeHotspot = this.sceneManager.addHotspot(
-      new THREE.Vector3(-60, -10, 50),
+    // 矿坑底部热点
+    const bottomHotspot = this.sceneManager.addHotspot(
+      new THREE.Vector3(20, -118, 20),
       {
-        id: 'openpit-slope',
-        title: '边坡安全监测',
-        description: '实时监测露天矿边坡稳定性，确保安全生产',
+        id: 'openpit-bottom',
+        title: '矿坑底部',
+        description: '露天开采的最底层，圆形平地用于集中装载',
         details: [
-          '监测内容：位移、应力、地下水',
-          '监测设备：GPS、测斜仪、应力计',
-          '预警标准：位移速率≥2mm/天',
-          '巡查频次：每日定时巡查'
+          '底部深度：-120米',
+          '底部直径：60米',
+          '功能：矿石集中装载区',
+          '排水：设有排水设施'
         ],
-        originalPosition: new THREE.Vector3(-60, -20, 50)
+        originalPosition: new THREE.Vector3(20, -120, 20)
       }
     )
-    this.hotspots.push(slopeHotspot)
-
-    // 爆破作业热点
-    const blastingHotspot = this.sceneManager.addHotspot(
-      new THREE.Vector3(-30, -35, -20),
-      {
-        id: 'openpit-blasting',
-        title: '爆破作业',
-        description: '通过爆破破碎坚硬岩石，为采装作业创造条件',
-        details: [
-          '爆破方法：多排微差爆破',
-          '炸药类型：乳化炸药、铵油炸药',
-          '安全距离：人员≥200米，设备≥100米',
-          '爆破效果：大块率<5%，根底率<3%'
-        ],
-        originalPosition: new THREE.Vector3(-30, -50, -20)
-      }
-    )
-    this.hotspots.push(blastingHotspot)
-  }
-
-  /**
-   * 创建边坡台阶特征
-   */
-  createSlopeFeatures() {
-    // 创建显著的边坡台阶
-    const slopeSteps = [
-      { y: -20, radius: 80, color: 0x8B7355 },
-      { y: -40, radius: 60, color: 0x7A6545 },
-      { y: -60, radius: 45, color: 0x695735 },
-      { y: -80, radius: 30, color: 0x584925 },
-      { y: -100, radius: 20, color: 0x473B15 }
-    ]
-
-    slopeSteps.forEach((step, index) => {
-      // 创建台阶环
-      const ringGeometry = new THREE.RingGeometry(step.radius - 5, step.radius + 5, 64)
-      const ringMaterial = new THREE.MeshStandardMaterial({
-        color: step.color,
-        roughness: 0.9,
-        side: THREE.DoubleSide
-      })
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial)
-      ring.rotation.x = -Math.PI / 2
-      ring.position.y = step.y + 0.1
-      this.sceneManager.scene.add(ring)
-      this.sceneObjects.push(ring)
-
-      // 添加台阶标记
-      if (index % 2 === 0) {
-        this.createStepMarker(step.radius, step.y, index + 1)
-      }
-    })
-
-    // 创建边坡防护网示意
-    this.createSlopeProtection()
-  }
-
-  /**
-   * 创建台阶标记
-   */
-  createStepMarker(radius, height, stepNumber) {
-    const markerGroup = new THREE.Group()
-
-    // 标记柱
-    const poleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 3, 8)
-    const poleMaterial = new THREE.MeshStandardMaterial({
-      color: 0xFF6600,
-      roughness: 0.7,
-      metalness: 0.3
-    })
-
-    const positions = [
-      { x: radius, z: 0 },
-      { x: -radius, z: 0 },
-      { x: 0, z: radius },
-      { x: 0, z: -radius }
-    ]
-
-    positions.forEach(pos => {
-      const pole = new THREE.Mesh(poleGeometry, poleMaterial)
-      pole.position.set(pos.x, height + 1.5, pos.z)
-      markerGroup.add(pole)
-
-      // 标记牌
-      const signGeometry = new THREE.BoxGeometry(1, 0.6, 0.1)
-      const signMaterial = new THREE.MeshStandardMaterial({
-        color: 0xFFFFFF,
-        roughness: 0.5
-      })
-      const sign = new THREE.Mesh(signGeometry, signMaterial)
-      sign.position.set(pos.x * 1.1, height + 2.8, pos.z)
-      markerGroup.add(sign)
-    })
-
-    this.sceneManager.scene.add(markerGroup)
-    this.sceneObjects.push(markerGroup)
-  }
-
-  /**
-   * 创建边坡防护
-   */
-  createSlopeProtection() {
-    // 在主要边坡区域添加防护网示意
-    const protectionPositions = [
-      { startAngle: 0, endAngle: Math.PI / 2, radius: 70 },
-      { startAngle: Math.PI, endAngle: Math.PI * 1.5, radius: 50 }
-    ]
-
-    protectionPositions.forEach((pos, index) => {
-      const curve = new THREE.EllipseCurve(
-        0, 0,
-        pos.radius, pos.radius,
-        pos.startAngle, pos.endAngle,
-        false,
-        0
-      )
-
-      const points = curve.getPoints(50)
-      const geometry = new THREE.BufferGeometry().setFromPoints(points)
-      const material = new THREE.LineBasicMaterial({
-        color: 0x00FF00,
-        linewidth: 2
-      })
-
-      const protectionLine = new THREE.Line(geometry, material)
-      protectionLine.rotation.x = -Math.PI / 2
-      protectionLine.position.y = -30
-      this.sceneManager.scene.add(protectionLine)
-      this.sceneObjects.push(protectionLine)
-    })
+    this.hotspots.push(bottomHotspot)
   }
 
   /**

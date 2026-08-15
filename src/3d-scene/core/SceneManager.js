@@ -154,8 +154,8 @@ export class SceneManager {
    * 创建基础环境
    */
   createBaseEnvironment() {
-    // 创建地形
-    this.createTerrain()
+    // 禁用基础地形创建，让各个阶段自己管理地形
+    // this.createTerrain() // 基础地形遮挡问题，已禁用
 
     // 创建天空盒效果
     this.createSkybox()
